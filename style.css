@@ -1105,7 +1105,7 @@ body.mode-home #bottom {
 }
 
 #homeMascot {
-  width: min(62vw, 30vh);
+  width: min(56vw, 25vh);
   margin-top: 1vh;
   animation: bob 2.4s ease-in-out infinite;
 }
@@ -1155,6 +1155,22 @@ body.mode-home #bottom {
 .homeTile:nth-child(2) { animation-delay: 0.08s; }
 .homeTile:nth-child(3) { animation-delay: 0.16s; }
 .homeTile:nth-child(4) { animation-delay: 0.24s; }
+.homeTile:nth-child(5) { animation-delay: 0.32s; }
+
+/* the Quiz tile is wide, under the other four */
+.homeTile.wide {
+  grid-column: span 2;
+  flex-direction: row;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 8px;
+}
+
+.homeTile[data-mode="quiz"] {
+  background: radial-gradient(circle at 25% 20%, #fff3a0, #ffb800 50%, #ff6a00);
+  box-shadow: 0 7px 0 #b34700, 0 12px 22px rgba(60, 0, 90, 0.3);
+  text-shadow: 0 2px 0 #b34700;
+}
 
 .homeTile[data-mode="talk"] {
   background: radial-gradient(circle at 25% 20%, #ffb3d9, #ff4fa3 55%, #d4147a);

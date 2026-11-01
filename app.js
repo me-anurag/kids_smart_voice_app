@@ -1136,6 +1136,7 @@ function think(heard, otherGuesses = []) {
   if (mode == "welcome") nameCommand(heard, otherGuesses);
   else if (mode == "picture") showPicture(heard, otherGuesses);
   else if (mode == "animals") animalCommand(heard);
+  else if (mode == "quiz") quizHeard(heard, otherGuesses);
   else lightCommand(heard);
 }
 

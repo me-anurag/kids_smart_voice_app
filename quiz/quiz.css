@@ -1,0 +1,535 @@
+/* ---------- Quiz: guess the sport / monument ---------- */
+
+body.mode-quiz {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.2), transparent 60%),
+    linear-gradient(160deg, #ff8a00 0%, #ff3d9a 50%, #7b2ff7 100%);
+}
+
+/* the quiz has its own text and buttons; the big mic stays for answering */
+body.mode-quiz #talkRow,
+body.mode-quiz #hints {
+  display: none;
+}
+
+body.mode-quiz #talk {
+  width: 80px;
+  height: 80px;
+}
+
+body.mode-quiz .micIcon {
+  font-size: 36px;
+}
+
+#quizView {
+  align-items: stretch;
+}
+
+#quizBox {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#qMenu,
+#qGame,
+#qResult {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#qMenu[hidden],
+#qGame[hidden],
+#qResult[hidden],
+#qNext[hidden],
+#qStreak[hidden],
+#qRecord[hidden] {
+  display: none;
+}
+
+/* ---------- level bar ---------- */
+
+#qLevel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+#qLevelBadge {
+  font-size: 40px;
+  animation: pop 2s ease-in-out infinite;
+}
+
+#qLevelInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+#qLevelName {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+#qLevelStars {
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.qBar {
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.qBar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffd60a, #7bed3f);
+  transition: width 1s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+/* ---------- category cards ---------- */
+
+.qCat {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 4px solid #fff;
+  box-shadow: 0 8px 0 rgba(60, 0, 90, 0.35);
+  color: #fff;
+  text-align: left;
+  animation: tileIn 0.5s backwards cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  transition: transform 0.1s;
+}
+
+.qCat:nth-of-type(2) {
+  animation-delay: 0.1s;
+}
+
+.qCat:active {
+  transform: translateY(5px) scale(0.98);
+}
+
+.qCatImg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  animation: kenburns 9s ease-in-out infinite alternate;
+}
+
+.qCat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(40, 0, 70, 0.8));
+}
+
+.qCatName {
+  position: absolute;
+  left: 18px;
+  bottom: 14px;
+  z-index: 1;
+  font-size: 32px;
+  font-weight: 800;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.qBest {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #ffd60a;
+  color: #6a2a00;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* ---------- top: progress, streak, score ---------- */
+
+#qTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#qDots {
+  flex: 1;
+  display: flex;
+  gap: 5px;
+}
+
+#qDots i {
+  flex: 1;
+  height: 10px;
+  max-width: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: background 0.3s, transform 0.3s;
+}
+
+#qDots i.now { background: #fff; transform: scaleY(1.4); }
+#qDots i.right { background: #3ed16f; }
+#qDots i.half { background: #ffd60a; }
+#qDots i.miss { background: #ff4f6d; }
+
+#qScore,
+#qStreak {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+#qScore {
+  background: #ffd60a;
+  color: #6a2a00;
+  box-shadow: 0 3px 0 #c99500;
+}
+
+#qStreak {
+  background: linear-gradient(135deg, #ff9f1a, #ff3b3b);
+  box-shadow: 0 3px 0 #b3200f;
+}
+
+.bump {
+  animation: pop 0.4s ease;
+}
+
+/* ---------- the mystery photo ---------- */
+
+#qCard {
+  position: relative;
+  flex: 1;
+  min-height: 140px;
+  max-height: 34vh;
+  border-radius: 24px;
+  border: 5px solid #fff;
+  background: #2a1050;
+  overflow: hidden;
+  box-shadow: 0 8px 0 rgba(60, 0, 90, 0.35);
+  transition: box-shadow 0.3s;
+}
+
+#qPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* starts blurry and zoomed, then becomes clear */
+#qPhoto.reveal {
+  animation: reveal 1.8s ease-out both;
+}
+
+@keyframes reveal {
+  0% { filter: blur(22px) saturate(1.4); transform: scale(1.25); }
+  100% { filter: blur(0) saturate(1); transform: scale(1); }
+}
+
+#qMystery {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #ffd60a;
+  color: #6a2a00;
+  font-size: 30px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 0 #c99500;
+  animation: wobble 0.8s ease-in-out infinite alternate;
+}
+
+#qCard.enter {
+  animation: bounceIn 0.5s ease;
+}
+
+#qCard.right {
+  box-shadow: 0 0 0 6px #3ed16f, 0 0 40px 10px rgba(62, 209, 111, 0.7);
+  animation: pop 0.5s ease;
+}
+
+#qCard.right #qMystery,
+#qCard.wrong #qMystery {
+  display: none;
+}
+
+#qCard.wrong {
+  box-shadow: 0 0 0 6px #ff4f6d;
+  animation: shake 0.45s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-12px) rotate(-2deg); }
+  40% { transform: translateX(10px) rotate(2deg); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(6px); }
+}
+
+.qFly {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translateX(-50%);
+  font-size: 44px;
+  font-weight: 800;
+  color: #ffd60a;
+  text-shadow: 0 3px 0 #6a2a00, 0 0 20px rgba(0, 0, 0, 0.4);
+  animation: fly 1.2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fly {
+  0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+  20% { transform: translate(-50%, -10px) scale(1.3); opacity: 1; }
+  100% { transform: translate(-50%, -110px) scale(1); opacity: 0; }
+}
+
+#qNext {
+  align-self: center;
+  padding: 10px 26px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 20%, #b6ffb0, #2fd16a 50%, #0a8f3f);
+  box-shadow: 0 5px 0 #066b2e;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  text-shadow: 0 2px 0 #066b2e;
+  animation: pop 1.2s ease-in-out infinite;
+}
+
+/* ---------- question, answers, feedback ---------- */
+
+#qAsk {
+  margin: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 2px 0 rgba(60, 0, 90, 0.4);
+}
+
+#qOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qOption {
+  --c: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 18px;
+  background: var(--c);
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 800;
+  text-align: left;
+  box-shadow: 0 5px 0 rgba(60, 0, 90, 0.3);
+  animation: tileIn 0.4s backwards cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  transition: transform 0.1s, background 0.2s;
+}
+
+.qOption:nth-child(2) { animation-delay: 0.08s; }
+.qOption:nth-child(3) { animation-delay: 0.16s; }
+
+.qOption:active {
+  transform: translateY(4px);
+}
+
+.qOptEmoji {
+  font-size: 26px;
+}
+
+.qOption.right {
+  --c: #3ed16f;
+  color: #fff;
+  text-shadow: 0 2px 0 #16903f;
+  animation: pop 0.4s ease;
+}
+
+.qOption.right::after {
+  content: "✓";
+  margin-left: auto;
+  font-size: 24px;
+}
+
+.qOption.wrong {
+  --c: #ff8095;
+  color: #fff;
+  opacity: 0.75;
+  animation: shake 0.4s ease;
+}
+
+#qFeedback {
+  margin: 0;
+  min-height: 0;
+  padding: 0 12px;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+
+#qFeedback.good,
+#qFeedback.hint {
+  padding: 8px 12px;
+  animation: pop 0.35s ease;
+}
+
+#qFeedback.good {
+  background: rgba(255, 255, 255, 0.92);
+  color: #16703a;
+}
+
+#qFeedback.hint {
+  background: #fff3a0;
+  color: #6a2a00;
+}
+
+/* ---------- result ---------- */
+
+#qResult {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+}
+
+#qTrophy {
+  font-size: 96px;
+  line-height: 1;
+  filter: drop-shadow(0 8px 0 rgba(60, 0, 90, 0.3));
+  animation: trophy 1s ease-in-out infinite alternate;
+}
+
+@keyframes trophy {
+  from { transform: rotate(-8deg) scale(1); }
+  to { transform: rotate(8deg) scale(1.1); }
+}
+
+#qResultTitle {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  text-shadow: 0 3px 0 rgba(60, 0, 90, 0.4);
+}
+
+#qResultStars i {
+  display: inline-block;
+  font-size: 50px;
+  font-style: normal;
+  filter: grayscale(1) opacity(0.35);
+}
+
+#qResultStars {
+  min-height: 62px;
+}
+
+#qResultStars i.on {
+  filter: none;
+  animation: starIn 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.6);
+}
+
+@keyframes starIn {
+  from { transform: scale(0) rotate(-180deg); }
+  to { transform: scale(1) rotate(0); }
+}
+
+#qRecord {
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd60a, #ff9f1a);
+  color: #6a2a00;
+  font-size: 20px;
+  font-weight: 800;
+  animation: pop 1s ease-in-out infinite;
+}
+
+#qResultScore {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+#qResultRight,
+#qResultLevel {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+#qResult .qBar {
+  width: 80%;
+}
+
+#qResultBtns {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+#qResultBtns button {
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 rgba(60, 0, 90, 0.3);
+}
+
+#qAgain {
+  background: #ffd60a !important;
+  color: #6a2a00 !important;
+}
+
+/* ---------- confetti over the whole screen ---------- */
+
+#qConfetti {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#qConfetti i {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  animation: fall 2s ease-in forwards;
+}
+
+@keyframes fall {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  100% { transform: translate(var(--drift), 105vh) rotate(var(--spin)); opacity: 0.9; }
+}

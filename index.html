@@ -17,6 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="talk/talk.css">
+<link rel="stylesheet" href="quiz/quiz.css">
 </head>
 
 <body class="mode-welcome">
@@ -56,6 +57,10 @@
     <button class="homeTile" data-mode="talk">
       <span class="tileEmoji">💬</span>
       <span class="tileName">Talk</span>
+    </button>
+    <button class="homeTile wide" data-mode="quiz">
+      <span class="tileEmoji">🏆</span>
+      <span class="tileName">Quiz</span>
     </button>
   </div>
   <button id="changeName">🔄 Change</button>
@@ -133,6 +138,46 @@
     </div>
   </section>
 
+  <!-- Quiz: guess the sport / monument (quiz/quiz.js) -->
+  <section id="quizView" class="view" hidden>
+    <div id="quizBox">
+      <div id="qMenu">
+        <div id="qLevel">
+          <span id="qLevelBadge">🥉</span>
+          <div id="qLevelInfo">
+            <div id="qLevelName"></div>
+            <div class="qBar"><i id="qLevelFill"></i></div>
+          </div>
+          <span id="qLevelStars"></span>
+        </div>
+        <button class="qCat" data-cat="sports"><span class="qCatImg"></span><span class="qCatName">⚽ Sports</span><span class="qBest"></span></button>
+        <button class="qCat" data-cat="monuments"><span class="qCatImg"></span><span class="qCatName">🏛️ Monuments</span><span class="qBest"></span></button>
+      </div>
+
+      <div id="qGame" hidden>
+        <div id="qTop"><div id="qDots"></div><span id="qStreak" hidden></span><span id="qScore">🪙 0</span></div>
+        <div id="qCard"><img id="qPhoto" alt=""><span id="qMystery">?</span></div>
+        <p id="qAsk"></p>
+        <div id="qOptions"></div>
+        <p id="qFeedback"></p>
+        <button id="qNext" hidden>Next ▶</button>
+      </div>
+
+      <div id="qResult" hidden>
+        <div id="qTrophy">🏆</div>
+        <h2 id="qResultTitle"></h2>
+        <div id="qResultStars"></div>
+        <div id="qRecord" hidden>🎉 New record!</div>
+        <div id="qResultScore"></div>
+        <div id="qResultRight"></div>
+        <div id="qResultLevel"></div>
+        <div class="qBar"><i id="qResultFill"></i></div>
+        <div id="qResultBtns"><button id="qAgain">🔁 Play again</button><button id="qMenuBtn">🏆 Quizzes</button></div>
+      </div>
+    </div>
+    <div id="qConfetti"></div>
+  </section>
+
   <!-- Pictures mode -->
   <section id="pictureView" class="view" hidden>
     <div id="card">
@@ -203,5 +248,7 @@
 <script src="blocklist.js"></script>
 <script src="app.js"></script>
 <script src="talk/talk.js"></script>
+<script src="quiz/quiz-data.js"></script>
+<script src="quiz/quiz.js"></script>
 </body>
 </html>
