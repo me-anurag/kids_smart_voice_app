@@ -360,7 +360,7 @@ function wiki(lang, params) {
   return fetch(url).then((r) => r.json());
 }
 
-const englishInfo = { prop: "pageimages|langlinks|pageprops", piprop: "thumbnail|name", pithumbsize: 960, lllang: "hi", ppprop: "disambiguation" };
+const englishInfo = { prop: "pageimages|langlinks|pageprops|extracts", piprop: "thumbnail|name", pithumbsize: 960, lllang: "hi", ppprop: "disambiguation", exintro: 1, explaintext: 1, exsentences: 2 };
 const hindiInfo = { prop: "pageimages|extracts|pageprops", piprop: "thumbnail|name", pithumbsize: 960, exintro: 1, explaintext: 1, ppprop: "disambiguation" };
 
 function goodPage(data) {
@@ -386,6 +386,35 @@ function shortHindi(extract) {
   let text = lines.slice(0, 2).join("।");
   if (text.length > 350) text = text.slice(0, 350).replace(/\s\S*$/, "") + "...";
   return text ? text + "।" : "";
+}
+
+function shortEnglish(extract) {
+  let clean = (extract || "").replace(/\s*\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+  if (clean.length > 300) clean = clean.slice(0, 300).replace(/\s\S*$/, "") + ".";
+  return clean;
+}
+
+// English -> Hindi with the free MyMemory service (only used when there is no Hindi article)
+async function toHindi(english) {
+  if (!english) return null;
+  try {
+    let url = "https://api.mymemory.translated.net/get?langpair=en|hi&q=" + encodeURIComponent(english);
+    let data = await fetch(url).then((r) => r.json());
+    let hindi = data.responseData && data.responseData.translatedText;
+    // daily limit reached, or not really Hindi
+    if (data.responseStatus != 200 || !hindi || /MYMEMORY/i.test(hindi) || !/[ऀ-ॿ]/.test(hindi)) return null;
+    return hindi;
+  } catch (e) {
+    return null;
+  }
+}
+
+// short names translate badly on their own ("water bottle" -> "hot water bottle"),
+// so translate "This is a water bottle." and cut the name out of "यह पानी की बोतल है।"
+async function toHindiName(english) {
+  let sentence = await toHindi("This is " + english + ".");
+  let match = sentence && sentence.match(/^यह\s+(?:एक\s+)?(.+?)\s+हैं?\s*[।.]?\s*$/);
+  return match ? match[1] : toHindi(english);
 }
 
 // ---------- Choosing good pictures ----------
@@ -638,9 +667,9 @@ async function showPicture(name) {
     let hindi = null;
     if (english && english.langlinks) {
       hindi = await findHindi({ titles: english.langlinks[0].title });
-    }
-    if (!hindi) {
-      // maybe the kid said a Hindi word ("hathi") - search Hindi Wikipedia directly
+    } else if (!english && /[ऀ-ॿ]/.test(name)) {
+      // the kid's words came out in Hindi letters - search Hindi Wikipedia directly.
+      // (never search it with English words: it returns unrelated articles)
       hindi = await findHindi({ generator: "search", gsrsearch: name, gsrlimit: 1 });
     }
     if (id != searchId) return;
@@ -651,8 +680,23 @@ async function showPicture(name) {
       return;
     }
 
-    let title = hindi ? hindi.title : english.title;
-    let text = hindi ? shortHindi(hindi.extract) : "";
+    let title, text;
+    if (hindi) {
+      title = hindi.title;
+      text = shortHindi(hindi.extract);
+    } else {
+      // English article only (like "water bottle"): translate its own first lines
+      let englishText = shortEnglish(english.extract);
+      if (isBlocked(english.title) || isBlocked(englishText)) {
+        showEmpty();
+        safeReply();
+        return;
+      }
+      [title, text] = await Promise.all([toHindiName(english.title), toHindi(englishText)]);
+      if (id != searchId) return;
+      title = title || english.title;
+      text = text || "यह है " + title + "! 👀";
+    }
 
     if (isBlocked(english && english.title) || isBlocked(title) || isBlocked(text)) {
       showEmpty();
