@@ -189,7 +189,6 @@ function listen() {
   }
   hush(); // so the app doesn't hear itself
   try {
-    mic.lang = mode == "welcome" ? "hi-IN" : "en-IN";
     mic.start();
     listening = true;
     talk.classList.add("listening");
@@ -231,7 +230,7 @@ function tr(hindi, english) {
 }
 
 function setTalkLabel() {
-  if (mode == "welcome") talkLabel.innerText = listening ? "सुन रहा हूँ..." : "दबाओ और नाम बोलो!";
+  if (mode == "welcome") talkLabel.innerText = listening ? "सुन रहा हूँ..." : "दबाओ और बोलो!";
   else talkLabel.innerText = listening ? tr("सुन रहा हूँ...", "Listening...") : tr("दबाओ और बोलो!", "Tap and talk!");
 }
 
@@ -994,7 +993,6 @@ const kids = [
 ];
 
 let player = null; // the kid who is playing now
-let nameTries = 0;
 let promptSpoken = false;
 
 function buildKidGrid() {
@@ -1051,17 +1049,36 @@ function sayWelcome(text) {
 }
 
 function askName() {
-  nameTries = 0;
+  // the app opens only with the full sentence; name buttons are just for phones that can't listen
+  kidGrid.hidden = !!mic;
   for (let b of kidGrid.children) b.classList.toggle("last", b.innerText.includes(load("sv-kid", "-")));
-  sayWelcome("नमस्ते! अपना नाम बताइए। 👋");
+  sayWelcome("नमस्ते! अपना नाम ऐसे बताइए: My name is ... 👋");
+}
+
+// "my name is", "my name's", and how the mic may write it in Hindi letters
+const MY_NAME_IS = ["my name is", "my names", "mine name is", "माय नेम इज", "माय नेम इस", "माई नेम इज", "माई नेम इस", "माय नेम ईज"];
+
+function saidMyNameIs(text) {
+  let words = " " + cleanText(text).replace(/[’']/g, "").split(/[^\p{L}\p{M}\p{N}]+/u).join(" ") + " ";
+  return MY_NAME_IS.some((phrase) => words.includes(" " + cleanText(phrase) + " "));
 }
 
 function nameCommand(heard, otherGuesses) {
-  let kid = findKid([heard, ...otherGuesses]);
+  let guesses = [heard, ...otherGuesses];
+  let full = guesses.filter(saidMyNameIs);
+  let kid = full.length ? findKid(full) : null;
   if (kid) return welcomeKid(kid);
-  nameTries++;
-  if (nameTries < 2) sayWelcome("माफ़ करना, समझ नहीं आया। फिर से बोलो, या अपने नाम पर दबाओ! 👇");
-  else welcomeKid(null);
+
+  let nameOnly = findKid(guesses);
+  if (nameOnly) {
+    // the name alone is not enough: teach the full sentence
+    sayWelcome("शाबाश! अब पूरा बोलो: My name is " + nameOnly.hindi + "! 😊");
+    welcomeText.innerText = "शाबाश! अब पूरा बोलो: My name is " + nameOnly.name + "! 😊";
+  } else if (full.length) {
+    sayWelcome("यह नाम मुझे नहीं पता। फिर से बोलो: My name is ... 🙂");
+  } else {
+    sayWelcome("पूरा बोलो: My name is ... और अपना नाम! 🗣️");
+  }
 }
 
 function welcomeKid(kid) {
@@ -1079,11 +1096,6 @@ function welcomeKid(kid) {
     }
   }, 300);
 }
-
-$("skipName").onclick = () => {
-  buzz();
-  welcomeKid(null);
-};
 
 $("changeName").onclick = () => {
   buzz();
