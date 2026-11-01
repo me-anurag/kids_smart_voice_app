@@ -5,6 +5,11 @@ const $ = (id) => document.getElementById(id);
 const body = document.body;
 const homeBtn = $("homeBtn");
 const home = $("home");
+const welcome = $("welcome");
+const welcomeText = $("welcomeText");
+const welcomeBuddy = $("welcomeBuddy");
+const kidGrid = $("kidGrid");
+const homeTitle = $("homeTitle");
 const modeTitle = $("modeTitle");
 const bulbWrap = $("bulbWrap");
 const lightView = $("lightView");
@@ -86,7 +91,7 @@ function speak(words) {
   // don't read emoji out loud
   let spoken = words.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "");
   let voice = new SpeechSynthesisUtterance(spoken);
-  let hindi = mode == "picture";
+  let hindi = hindiMode();
   voice.lang = hindi ? "hi-IN" : "en-IN";
   if (hindi ? hindiVoice : englishVoice) voice.voice = hindi ? hindiVoice : englishVoice;
   voice.rate = 0.9;
@@ -97,10 +102,13 @@ function speak(words) {
   };
   // the mascot wiggles while it talks
   currentVoice = voice;
-  voice.onstart = () => buddy.classList.add("talking");
+  voice.onstart = () => {
+    promptSpoken = true;
+    setTalking(true);
+  };
   voice.onend = voice.onerror = function () {
     if (currentVoice != voice) return; // an older sentence that was cut off
-    buddy.classList.remove("talking");
+    setTalking(false);
     whenIdle();
   };
   speechSynthesis.cancel();
@@ -110,10 +118,15 @@ function speak(words) {
 
 let currentVoice = null;
 
+function setTalking(on) {
+  buddy.classList.toggle("talking", on);
+  welcomeBuddy.classList.toggle("talking", on);
+}
+
 function wiggleBuddy() {
-  buddy.classList.add("talking");
+  setTalking(true);
   setTimeout(() => {
-    if (!("speechSynthesis" in window) || !speechSynthesis.speaking) buddy.classList.remove("talking");
+    if (!("speechSynthesis" in window) || !speechSynthesis.speaking) setTalking(false);
   }, 1200);
 }
 
@@ -176,6 +189,7 @@ function listen() {
   }
   hush(); // so the app doesn't hear itself
   try {
+    mic.lang = mode == "welcome" ? "hi-IN" : "en-IN";
     mic.start();
     listening = true;
     talk.classList.add("listening");
@@ -208,12 +222,17 @@ const MODES = {
 };
 
 // Pictures talks in Hindi, everything else in English
+function hindiMode() {
+  return mode == "picture" || mode == "welcome";
+}
+
 function tr(hindi, english) {
-  return mode == "picture" ? hindi : english;
+  return hindiMode() ? hindi : english;
 }
 
 function setTalkLabel() {
-  talkLabel.innerText = listening ? tr("सुन रहा हूँ...", "Listening...") : tr("दबाओ और बोलो!", "Tap and talk!");
+  if (mode == "welcome") talkLabel.innerText = listening ? "सुन रहा हूँ..." : "दबाओ और नाम बोलो!";
+  else talkLabel.innerText = listening ? tr("सुन रहा हूँ...", "Listening...") : tr("दबाओ और बोलो!", "Tap and talk!");
 }
 
 function showHints(list) {
@@ -242,8 +261,17 @@ function pick(name) {
   mode = name;
   body.className = "mode-" + name;
   home.hidden = name != "home";
+  welcome.hidden = name != "welcome";
   for (let [key, m] of Object.entries(MODES)) m.view.hidden = key != name;
-  if (name == "home") return;
+  if (name == "welcome") {
+    setTalkLabel();
+    askName();
+    return;
+  }
+  if (name == "home") {
+    homeTitle.innerText = player ? "Hi " + player.name + "! 👋" : "Bolo Bolo";
+    return;
+  }
 
   let m = MODES[name];
   modeTitle.innerText = m.title;
@@ -947,6 +975,126 @@ function animalCommand(heard) {
   else speak("I don't know that animal's sound yet. Try lion, dog or cat! 🐾");
 }
 
+// ---------- Who is playing? ----------
+// The app asks the name when it opens. Names are spoken from their Hindi spelling so they sound right.
+
+const kids = [
+  { name: "Anshu", hindi: "अंशु", emoji: "🦁", c: "#ff9f1a", d: "#c26a00",
+    sounds: ["anshu", "anshoo", "ansu", "anshuu", "अंशु", "अंशू", "अंसु", "अन्शु", "अनशु"] },
+  { name: "Divyansh", hindi: "दिव्यांश", emoji: "🚀", c: "#22b8ff", d: "#0577b8",
+    sounds: ["divyansh", "divyaansh", "divyanshu", "divyans", "divansh", "दिव्यांश", "दिव्यंश", "दिवयांश", "दिव्यांशु", "दिवांश"] },
+  { name: "Nishtha", hindi: "निष्ठा", emoji: "🦋", c: "#ff4fa3", d: "#c21a73",
+    sounds: ["nishtha", "nishta", "nistha", "nista", "nishthaa", "निष्ठा", "निस्था", "निश्था", "निष्टा", "निस्ठा"] },
+  { name: "Ishita", hindi: "इशिता", emoji: "🌸", c: "#9b5cff", d: "#6427c7",
+    sounds: ["ishita", "eshita", "ishitha", "isita", "इशिता", "ईशिता", "इसिता", "इशीता"] },
+  { name: "Aarohi", hindi: "आरोही", emoji: "🌈", c: "#3ed16f", d: "#16903f",
+    sounds: ["aarohi", "arohi", "aarohee", "arohee", "आरोही", "आरोहि", "अरोही", "आरोई"] },
+  { name: "Anvi", hindi: "अन्वी", emoji: "🐰", c: "#ffcf1a", d: "#c99500",
+    sounds: ["anvi", "anvee", "anavi", "anwi", "अन्वी", "अनवी", "अन्वि", "अनवि", "अनुवी"] },
+];
+
+let player = null; // the kid who is playing now
+let nameTries = 0;
+let promptSpoken = false;
+
+function buildKidGrid() {
+  for (let kid of kids) {
+    let b = document.createElement("button");
+    b.className = "kid";
+    b.style.setProperty("--c", kid.c);
+    b.style.setProperty("--d", kid.d);
+    b.innerHTML = '<span class="kidEmoji"></span><span class="kidName"></span>';
+    b.querySelector(".kidEmoji").innerText = kid.emoji;
+    b.querySelector(".kidName").innerText = kid.name;
+    b.onclick = () => {
+      buzz();
+      welcomeKid(kid);
+    };
+    kidGrid.appendChild(b);
+  }
+}
+
+// small spelling differences are fine: "nishta" is still Nishtha
+function editDistance(a, b) {
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      let keep = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] == b[j - 1] ? 0 : 1));
+      prev = keep;
+    }
+  }
+  return row[b.length];
+}
+
+function findKid(guesses) {
+  let words = guesses.flatMap((g) => cleanText(g).split(/[^\p{L}\p{M}\p{N}]+/u)).filter(Boolean);
+  let sounds = kids.flatMap((kid) => kid.sounds.map((s) => ({ kid, s: cleanText(s) })));
+  let exact = sounds.find(({ s }) => words.includes(s));
+  if (exact) return exact.kid;
+  let best = null;
+  for (let w of words) {
+    for (let { kid, s } of sounds) {
+      if (s.length < 4) continue;
+      let d = editDistance(w, s);
+      if (d <= (s.length >= 7 ? 2 : 1) && (!best || d < best.d)) best = { kid, d };
+    }
+  }
+  return best && best.kid;
+}
+
+function sayWelcome(text) {
+  welcomeText.innerText = text;
+  speak(text);
+}
+
+function askName() {
+  nameTries = 0;
+  for (let b of kidGrid.children) b.classList.toggle("last", b.innerText.includes(load("sv-kid", "-")));
+  sayWelcome("नमस्ते! अपना नाम बताइए। 👋");
+}
+
+function nameCommand(heard, otherGuesses) {
+  let kid = findKid([heard, ...otherGuesses]);
+  if (kid) return welcomeKid(kid);
+  nameTries++;
+  if (nameTries < 2) sayWelcome("माफ़ करना, समझ नहीं आया। फिर से बोलो, या अपने नाम पर दबाओ! 👇");
+  else welcomeKid(null);
+}
+
+function welcomeKid(kid) {
+  player = kid;
+  if (kid) save("sv-kid", kid.name);
+  tada();
+  sayWelcome(kid ? "Hello " + kid.hindi + ", आपका स्वागत है! 🎉" : "नमस्ते! आपका स्वागत है! 🎉");
+  welcomeText.innerText = kid ? "Hello " + kid.name + ", आपका स्वागत है! 🎉" : "नमस्ते! आपका स्वागत है! 🎉";
+  // go to the home screen once the greeting is said
+  let wait = setInterval(() => {
+    if (mode != "welcome") return clearInterval(wait);
+    if (!("speechSynthesis" in window) || !(speechSynthesis.speaking || speechSynthesis.pending)) {
+      clearInterval(wait);
+      pick("home");
+    }
+  }, 300);
+}
+
+$("skipName").onclick = () => {
+  buzz();
+  welcomeKid(null);
+};
+
+$("changeName").onclick = () => {
+  buzz();
+  pick("welcome");
+};
+
+// phones only allow talking after the first touch: say the question then, if it wasn't heard yet
+document.addEventListener("pointerdown", () => {
+  if (mode == "welcome" && !promptSpoken && !listening) askName();
+}, { once: true });
+
 // ---------- Brain ----------
 
 function think(heard, otherGuesses = []) {
@@ -958,7 +1106,8 @@ function think(heard, otherGuesses = []) {
     safeReply();
     return;
   }
-  if (mode == "picture") showPicture(heard, otherGuesses);
+  if (mode == "welcome") nameCommand(heard, otherGuesses);
+  else if (mode == "picture") showPicture(heard, otherGuesses);
   else if (mode == "animals") animalCommand(heard);
   else lightCommand(heard);
 }
@@ -1068,6 +1217,7 @@ setTimeout(showInstallBox, 2500);
 // ---------- Start ----------
 
 buildAnimalGrid();
+buildKidGrid();
 history.replaceState(null, "");
-pick("home");
+pick("welcome");
 setLight(load("sv-light", OFF_COLOR), false);

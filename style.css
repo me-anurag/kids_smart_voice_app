@@ -884,7 +884,8 @@ body.mode-home #bottom {
 
 #homeTitle {
   margin: 0;
-  font-size: 44px;
+  font-size: 40px;
+  text-align: center;
   font-weight: 800;
   line-height: 1;
   color: #fff;
@@ -925,7 +926,7 @@ body.mode-home #bottom {
 .homeTile:nth-child(3) { animation-delay: 0.16s; }
 
 @keyframes tileIn {
-  from { transform: translateY(30px) scale(0.9); opacity: 0; }
+  from { transform: translateY(30px) scale(0.9); }
 }
 
 .homeTile[data-mode="light"] {
@@ -1078,6 +1079,132 @@ body.mode-animals #bubble {
 
 #hints[hidden] {
   display: none;
+}
+
+/* ---------- Welcome: who is playing? ---------- */
+
+body.mode-welcome #topbar,
+body.mode-welcome #stage {
+  display: none;
+}
+
+#welcome {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 18px 4px;
+  overflow-y: auto;
+}
+
+#welcome[hidden] {
+  display: none;
+}
+
+#welcomeBuddy {
+  width: min(44vw, 20vh);
+  transform-origin: 50% 100%;
+  animation: bob 2.4s ease-in-out infinite;
+}
+
+#welcomeBuddy.talking {
+  animation: chatter 0.45s ease-in-out infinite alternate;
+}
+
+#welcomeText {
+  position: relative;
+  margin: 10px 0 16px;
+  padding: 12px 20px;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 24px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 6px 0 rgba(60, 0, 90, 0.3);
+}
+
+#welcomeText::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  margin-left: -12px;
+  border: 12px solid transparent;
+  border-top: none;
+  border-bottom-color: #fff;
+}
+
+#kidGrid {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.kid {
+  position: relative;
+  overflow: hidden;
+  padding: 10px 4px 8px;
+  border-radius: 22px;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 45%), var(--c);
+  box-shadow: 0 6px 0 var(--d);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 2px 0 var(--d);
+  transition: transform 0.1s;
+}
+
+.kid:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--d);
+}
+
+/* whoever played last time is easy to spot */
+.kid.last {
+  border-color: #fff;
+  animation: pop 1.6s ease-in-out infinite;
+}
+
+.kidEmoji {
+  font-size: 38px;
+  line-height: 1.15;
+  text-shadow: none;
+}
+
+#skipName {
+  margin-top: 14px;
+  padding: 6px 18px;
+  background: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+#changeName {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 2;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 /* ---------- Install popup ---------- */

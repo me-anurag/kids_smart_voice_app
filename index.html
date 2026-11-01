@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="mode-home">
+<body class="mode-welcome">
 
 <!-- twinkling sparkles in the background -->
 <div id="sky" aria-hidden="true">
@@ -53,7 +53,16 @@
       <span class="tileName">Animal Sounds</span>
     </button>
   </div>
+  <button id="changeName">🔄 Change</button>
   <div id="homeFoot"><span id="version"></span> · <a href="credits.html">Credits</a></div>
+</section>
+
+<!-- Welcome: who is playing? -->
+<section id="welcome" hidden>
+  <img src="icons/mascot.png" alt="" id="welcomeBuddy">
+  <p id="welcomeText">नमस्ते! अपना नाम बताइए। 👋</p>
+  <div id="kidGrid"></div>
+  <button id="skipName">Skip ▸</button>
 </section>
 
 <header id="topbar">
