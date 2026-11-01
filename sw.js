@@ -1,8 +1,8 @@
 // Service worker: makes the app installable, work offline, and update itself.
 importScripts("version.js");
 
-const CACHE = "smartvoice-" + APP_VERSION + "-" + BUILD;
-const FONT_CACHE = "smartvoice-fonts";
+const CACHE = "bolobolo-" + APP_VERSION + "-" + BUILD;
+const FONT_CACHE = "bolobolo-fonts";
 
 const FILES = [
   "./",
@@ -16,6 +16,7 @@ const FILES = [
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/icon-maskable-512.png",
+  "icons/apple-touch-icon.png",
 ];
 
 self.addEventListener("install", (event) => {

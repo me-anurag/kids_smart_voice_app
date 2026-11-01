@@ -1,4 +1,4 @@
-# Netlify settings for SmartVoice (static site)
+# Netlify settings for Bolo Bolo (static site)
 # Every push to GitHub: Netlify stamps the commit id into version.js, then publishes.
 [build]
   publish = "."

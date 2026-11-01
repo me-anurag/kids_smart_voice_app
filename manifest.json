@@ -1,14 +1,14 @@
 {
-  "name": "SmartVoice - बोलो और देखो",
-  "short_name": "SmartVoice",
+  "name": "Bolo Bolo - बोलो और देखो",
+  "short_name": "Bolo Bolo",
   "description": "बच्चों के लिए आवाज़ से चलने वाला ऐप - बत्ती और तस्वीरें",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#2b1055",
-  "theme_color": "#7b2ff7",
+  "background_color": "#9206fb",
+  "theme_color": "#9206fb",
   "lang": "hi",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

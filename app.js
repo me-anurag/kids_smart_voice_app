@@ -23,7 +23,7 @@ const talk = $("talk");
 const talkLabel = $("talkLabel");
 const music = $("music");
 
-$("version").innerText = "SmartVoice v" + APP_VERSION + " (" + BUILD + ")";
+$("version").innerText = "Bolo Bolo v" + APP_VERSION + " (" + BUILD + ")";
 
 // ---------- Saved settings (stay the same until changed) ----------
 
@@ -314,7 +314,7 @@ function lightCommand(heard) {
     setLight(ON_COLOR);
     speak("बत्ती जल गई! 💡");
   } else if (says(words, ["hello", "hi", "hey", "namaste", "नमस्ते", "हेलो"])) {
-    speak("नमस्ते! मैं स्मार्टवॉइस हूँ। 👋");
+    speak("नमस्ते! मैं बोलो बोलो हूँ। 👋");
   } else if (says(words, ["time", "samay", "टाइम", "समय"])) {
     let now = new Date();
     let hour = now.getHours() % 12 || 12;
