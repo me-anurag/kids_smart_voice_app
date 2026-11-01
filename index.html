@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="mode-light">
+<body class="mode-home">
 
 <!-- twinkling sparkles in the background -->
 <div id="sky" aria-hidden="true">
@@ -34,12 +34,31 @@
   <b style="right:-60px;top:62%;animation-delay:-4s"></b>
 </div>
 
+<!-- Home: pick what to play -->
+<section id="home">
+  <img src="icons/mascot-scene.png" alt="" id="homeMascot">
+  <h1 id="homeTitle">Bolo Bolo</h1>
+  <p id="homeSub">What do you want to play?</p>
+  <div id="homeTiles">
+    <button class="homeTile" data-mode="light">
+      <span class="tileEmoji">💡</span>
+      <span class="tileName">Lights</span>
+    </button>
+    <button class="homeTile" data-mode="picture">
+      <span class="tileEmoji">🖼️</span>
+      <span class="tileName">Pictures</span>
+    </button>
+    <button class="homeTile" data-mode="animals">
+      <span class="tileEmoji">🐾</span>
+      <span class="tileName">Animal Sounds</span>
+    </button>
+  </div>
+  <div id="homeFoot"><span id="version"></span> · <a href="credits.html">Credits</a></div>
+</section>
+
 <header id="topbar">
-  <button id="menuBtn" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
-  <div id="appName"><img src="icons/icon-192.png" alt="">Bolo Bolo</div>
-  <div id="modeChip">💡 बत्ती</div>
+  <button id="homeBtn" aria-label="Home">🏠</button>
+  <div id="appName"><img src="icons/icon-192.png" alt=""><span id="modeTitle">Lights</span></div>
 </header>
 
 <main id="stage">
@@ -51,6 +70,11 @@
       <div id="bulb"><div class="filament"></div></div>
       <div id="bulbBase"></div>
     </div>
+  </section>
+
+  <!-- Animal sounds -->
+  <section id="animalView" class="view" hidden>
+    <div id="animalGrid"></div>
   </section>
 
   <!-- Pictures mode -->
@@ -102,39 +126,18 @@
     <span class="wave right w1"></span>
     <span class="wave right w2"></span>
   </div>
-  <div id="talkLabel">दबाओ और बोलो!</div>
+  <div id="talkLabel">Tap and talk!</div>
 </footer>
-
-<!-- Slide-in menu -->
-<div id="overlay" hidden></div>
-<nav id="drawer" aria-hidden="true">
-  <div id="drawerHead">
-    <img src="icons/mascot.png" alt="">
-    <div id="drawerTitle">क्या खेलें?</div>
-  </div>
-  <button class="tile" data-mode="light">
-    <span class="tileEmoji">💡</span>
-    <span class="tileName">बत्ती</span>
-    <span class="tick">✔</span>
-  </button>
-  <button class="tile" data-mode="picture">
-    <span class="tileEmoji">🖼️</span>
-    <span class="tileName">तस्वीरें</span>
-    <span class="tick">✔</span>
-  </button>
-  <div id="drawerRainbow"></div>
-  <div id="version"></div>
-</nav>
 
 <!-- Install popup: shown when the link is opened in the browser -->
 <div id="installBox" hidden>
   <div id="installCard">
     <img src="icons/mascot-scene.png" alt="" id="installIcon">
     <div id="installTitle">Bolo Bolo</div>
-    <div id="installText">फ़ोन में ऐप डालो और खेलो!</div>
-    <button id="installBtn">📲 ऐप इंस्टॉल करो</button>
+    <div id="installText">Add the app to your phone and play!</div>
+    <button id="installBtn">📲 Install app</button>
     <div id="installHelp" hidden></div>
-    <button id="installLater">बाद में</button>
+    <button id="installLater">Later</button>
   </div>
 </div>
 

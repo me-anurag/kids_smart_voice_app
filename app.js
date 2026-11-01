@@ -3,13 +3,14 @@
 const $ = (id) => document.getElementById(id);
 
 const body = document.body;
-const menuBtn = $("menuBtn");
-const modeChip = $("modeChip");
-const drawer = $("drawer");
-const overlay = $("overlay");
+const homeBtn = $("homeBtn");
+const home = $("home");
+const modeTitle = $("modeTitle");
 const bulbWrap = $("bulbWrap");
 const lightView = $("lightView");
 const pictureView = $("pictureView");
+const animalView = $("animalView");
+const animalGrid = $("animalGrid");
 const card = $("card");
 const cardEmpty = $("cardEmpty");
 const cardLoading = $("cardLoading");
@@ -46,15 +47,21 @@ function save(key, value) {
   } catch (e) {}
 }
 
-// ---------- Hindi voice ----------
+// ---------- Voices ----------
 
 let hindiVoice = null;
+let englishVoice = null;
 
 function findVoice() {
   let voices = speechSynthesis.getVoices();
   hindiVoice =
     voices.find((v) => v.lang.startsWith("hi") && v.localService) ||
     voices.find((v) => v.lang.startsWith("hi")) ||
+    null;
+  englishVoice =
+    voices.find((v) => v.lang == "en-IN" && v.localService) ||
+    voices.find((v) => v.lang == "en-IN") ||
+    voices.find((v) => v.lang.startsWith("en") && v.localService) ||
     null;
 }
 
@@ -79,8 +86,9 @@ function speak(words) {
   // don't read emoji out loud
   let spoken = words.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "");
   let voice = new SpeechSynthesisUtterance(spoken);
-  voice.lang = "hi-IN";
-  if (hindiVoice) voice.voice = hindiVoice;
+  let hindi = mode == "picture";
+  voice.lang = hindi ? "hi-IN" : "en-IN";
+  if (hindi ? hindiVoice : englishVoice) voice.voice = hindi ? hindiVoice : englishVoice;
   voice.rate = 0.9;
   voice.pitch = 1.15;
   voice.onboundary = function (event) {
@@ -114,7 +122,7 @@ function hush() {
 }
 
 function safeReply() {
-  speak("चलो, कुछ और देखते हैं! किसी जानवर या चीज़ का नाम बोलो। 🐼");
+  speak(tr("चलो, कुछ और देखते हैं! किसी जानवर या चीज़ का नाम बोलो। 🐼", "Let's try something else! Say an animal or a thing. 🐼"));
 }
 
 function buzz() {
@@ -140,18 +148,18 @@ if (Recognition) {
 
   mic.onerror = function (event) {
     if (event.error == "not-allowed" || event.error == "service-not-allowed") {
-      speak("माइक चालू करने की इजाज़त दो, फिर बोलो! 🎤");
+      speak(tr("माइक चालू करने की इजाज़त दो, फिर बोलो! 🎤", "Please allow the microphone, then talk! 🎤"));
     } else if (event.error == "no-speech") {
-      speak("कुछ सुनाई नहीं दिया, फिर से बोलो! 👂");
+      speak(tr("कुछ सुनाई नहीं दिया, फिर से बोलो! 👂", "I didn't hear anything. Say it again! 👂"));
     } else if (event.error == "network") {
-      speak("बोलने के लिए इंटरनेट चालू करो। 📶");
+      speak(tr("बोलने के लिए इंटरनेट चालू करो। 📶", "Turn on the internet to talk. 📶"));
     }
   };
 
   mic.onend = function () {
     listening = false;
     talk.classList.remove("listening");
-    talkLabel.innerText = "दबाओ और बोलो!";
+    setTalkLabel();
     whenIdle();
   };
 }
@@ -159,7 +167,7 @@ if (Recognition) {
 function listen() {
   buzz();
   if (!mic) {
-    speak("इस फ़ोन में आवाज़ सुनने की सुविधा नहीं है। नीचे वाले बटन दबाओ! 👇");
+    speak(tr("इस फ़ोन में आवाज़ सुनने की सुविधा नहीं है। नीचे वाले बटन दबाओ! 👇", "This phone can't listen. Tap the buttons instead! 👇"));
     return;
   }
   if (listening) {
@@ -171,20 +179,20 @@ function listen() {
     mic.start();
     listening = true;
     talk.classList.add("listening");
-    talkLabel.innerText = "सुन रहा हूँ...";
+    setTalkLabel();
   } catch (e) {}
 }
 
 talk.onclick = listen;
 
-// ---------- Modes + menu ----------
+// ---------- Home + modes ----------
 
-let mode = load("sv-mode", "light");
+let mode = "home";
 
 const lightHints = [
-  ["💡 on", "on"], ["🌑 off", "off"], ["🔴 लाल", "red"], ["🔵 नीला", "blue"],
-  ["🟢 हरा", "green"], ["🟡 पीला", "yellow"], ["🩷 गुलाबी", "pink"], ["🟣 बैंगनी", "purple"],
-  ["🟠 नारंगी", "orange"], ["🎉 party", "party"], ["👋 hello", "hello"], ["⏰ time", "time"],
+  ["💡 On", "on"], ["🌑 Off", "off"], ["🔴 Red", "red"], ["🔵 Blue", "blue"],
+  ["🟢 Green", "green"], ["🟡 Yellow", "yellow"], ["🩷 Pink", "pink"], ["🟣 Purple", "purple"],
+  ["🟠 Orange", "orange"], ["⚪ White", "white"], ["🎉 Party", "party"], ["👋 Hello", "hello"], ["⏰ Time", "time"],
 ];
 
 const pictureHints = [
@@ -193,8 +201,24 @@ const pictureHints = [
   ["🕌 ताजमहल", "Taj Mahal"], ["🌈 इंद्रधनुष", "rainbow"], ["🦒 जिराफ़", "giraffe"],
 ];
 
+const MODES = {
+  light: { view: lightView, title: "Lights", hints: lightHints, hello: "Say: on, off, red, blue, party... 💡" },
+  picture: { view: pictureView, title: "Pictures", hints: pictureHints, hello: "किसी भी चीज़ का नाम बोलो! 🖼️" },
+  animals: { view: animalView, title: "Animal Sounds", hints: [], hello: "Tap an animal, or say its name! 🐾" },
+};
+
+// Pictures talks in Hindi, everything else in English
+function tr(hindi, english) {
+  return mode == "picture" ? hindi : english;
+}
+
+function setTalkLabel() {
+  talkLabel.innerText = listening ? tr("सुन रहा हूँ...", "Listening...") : tr("दबाओ और बोलो!", "Tap and talk!");
+}
+
 function showHints(list) {
   hints.innerHTML = "";
+  hints.hidden = !list.length;
   for (let [label, word] of list) {
     let chip = document.createElement("button");
     chip.className = "chip";
@@ -209,61 +233,42 @@ function showHints(list) {
 }
 
 function pick(name) {
-  mode = name;
-  save("sv-mode", name);
   stopParty();
   stopSlides();
+  stopAnimal();
   hush();
+  if (listening && mic) mic.abort();
 
+  mode = name;
   body.className = "mode-" + name;
-  for (let tile of document.querySelectorAll(".tile")) {
-    tile.classList.toggle("selected", tile.dataset.mode == name);
-  }
+  home.hidden = name != "home";
+  for (let [key, m] of Object.entries(MODES)) m.view.hidden = key != name;
+  if (name == "home") return;
 
-  if (name == "light") {
-    lightView.hidden = false;
-    pictureView.hidden = true;
-    modeChip.innerText = "💡 बत्ती";
-    showHints(lightHints);
-    bubble.innerText = "बोलो: on, off, लाल, नीला, party... 💡";
-  } else {
-    lightView.hidden = true;
-    pictureView.hidden = false;
-    modeChip.innerText = "🖼️ तस्वीरें";
-    showHints(pictureHints);
-    bubble.innerText = "किसी भी चीज़ का नाम बोलो! 🖼️";
-  }
+  let m = MODES[name];
+  modeTitle.innerText = m.title;
+  showHints(m.hints);
+  bubble.innerText = m.hello;
+  setTalkLabel();
 }
 
-function openMenu() {
+function openMode(name) {
   buzz();
-  drawer.classList.add("open");
-  drawer.setAttribute("aria-hidden", "false");
-  overlay.hidden = false;
-  history.pushState({ menu: true }, "");
+  history.pushState({ mode: name }, "");
+  pick(name);
 }
 
-function closeMenu(fromBack) {
-  if (!drawer.classList.contains("open")) return;
-  drawer.classList.remove("open");
-  drawer.setAttribute("aria-hidden", "true");
-  overlay.hidden = true;
-  if (!fromBack && history.state && history.state.menu) history.back();
+function goHome() {
+  buzz();
+  if (history.state && history.state.mode) history.back(); // popstate below shows home
+  else pick("home");
 }
 
-menuBtn.onclick = openMenu;
-overlay.onclick = () => closeMenu(false);
-window.addEventListener("popstate", () => closeMenu(true)); // phone back button closes menu
-document.addEventListener("keydown", (e) => {
-  if (e.key == "Escape") closeMenu(false);
-});
+homeBtn.onclick = goHome;
+window.addEventListener("popstate", (e) => pick((e.state && e.state.mode) || "home")); // phone back button returns home
 
-for (let tile of document.querySelectorAll(".tile")) {
-  tile.onclick = function () {
-    buzz();
-    pick(tile.dataset.mode);
-    closeMenu(false);
-  };
+for (let tile of document.querySelectorAll(".homeTile")) {
+  tile.onclick = () => openMode(tile.dataset.mode);
 }
 
 // ---------- Light mode ----------
@@ -323,30 +328,30 @@ function lightCommand(heard) {
 
   if (says(words, ["party", "disco", "पार्टी", "डिस्को"])) {
     startParty();
-    speak("पार्टी टाइम! 🎉");
+    speak("Party time! 🎉");
     return;
   }
-  for (let c of Object.values(colors)) {
+  for (let [key, c] of Object.entries(colors)) {
     if (says(words, c.words)) {
       setLight(c.color);
-      speak("बत्ती " + c.name + " हो गई! 🌟");
+      speak("The light is " + key + "! 🌟");
       return;
     }
   }
   if (says(words, ["off", "band", "bujhao", "bujha", "बंद", "बुझाओ"])) {
     setLight(OFF_COLOR);
-    speak("बत्ती बंद हो गई! 🌙");
+    speak("Light off! 🌙");
   } else if (says(words, ["on", "chalu", "jalao", "jala", "चालू", "जलाओ"])) {
     setLight(ON_COLOR);
-    speak("बत्ती जल गई! 💡");
+    speak("Light on! 💡");
   } else if (says(words, ["hello", "hi", "hey", "namaste", "नमस्ते", "हेलो"])) {
-    speak("नमस्ते! मैं बोलो बोलो हूँ। 👋");
+    speak("Hello! I am Bolo Bolo. 👋");
   } else if (says(words, ["time", "samay", "टाइम", "समय"])) {
     let now = new Date();
     let hour = now.getHours() % 12 || 12;
-    speak("अभी " + hour + " बजकर " + now.getMinutes() + " मिनट हुए हैं। ⏰");
+    speak("It is " + hour + ":" + String(now.getMinutes()).padStart(2, "0") + " now. ⏰");
   } else {
-    speak("मुझे समझ नहीं आया, फिर से बोलो! 🤔");
+    speak("I didn't get that. Say it again! 🤔");
   }
 }
 
@@ -822,6 +827,126 @@ async function showPicture(name, otherGuesses = []) {
   }
 }
 
+// ---------- Animal sounds ----------
+// Sounds are in sounds/<id>.mp3 (from Wikimedia Commons, see credits.html)
+
+const animals = [
+  { id: "lion", emoji: "🦁", name: "Lion", says: "Roar!", words: ["lion", "sher", "sheru", "शेर"] },
+  { id: "tiger", emoji: "🐯", name: "Tiger", says: "Grrr!", words: ["tiger", "bagh", "baagh", "बाघ"] },
+  { id: "elephant", emoji: "🐘", name: "Elephant", says: "Paa-oo!", words: ["elephant", "hathi", "haathi", "हाथी"] },
+  { id: "dog", emoji: "🐶", name: "Dog", says: "Woof woof!", words: ["dog", "puppy", "kutta", "kutte", "कुत्ता"] },
+  { id: "cat", emoji: "🐱", name: "Cat", says: "Meow!", words: ["cat", "kitten", "kitty", "billi", "बिल्ली"] },
+  { id: "cow", emoji: "🐮", name: "Cow", says: "Moo!", words: ["cow", "gaay", "gay", "gai", "gaai", "गाय"] },
+  { id: "horse", emoji: "🐴", name: "Horse", says: "Neigh!", words: ["horse", "ghoda", "ghora", "घोड़ा", "घोडा"] },
+  { id: "goat", emoji: "🐐", name: "Goat", says: "Maa maa!", words: ["goat", "bakri", "bakra", "बकरी", "बकरा"] },
+  { id: "sheep", emoji: "🐑", name: "Sheep", says: "Baa baa!", words: ["sheep", "lamb", "bhed", "भेड़", "भेड"] },
+  { id: "rooster", emoji: "🐓", name: "Rooster", says: "Kukdoo koo!", words: ["rooster", "hen", "chicken", "murga", "murgi", "मुर्गा", "मुर्गी"] },
+  { id: "duck", emoji: "🦆", name: "Duck", says: "Quack quack!", words: ["duck", "batakh", "batak", "बतख"] },
+  { id: "frog", emoji: "🐸", name: "Frog", says: "Ribbit!", words: ["frog", "medhak", "mendhak", "मेंढक"] },
+  { id: "owl", emoji: "🦉", name: "Owl", says: "Hoo hoo!", words: ["owl", "ullu", "उल्लू"] },
+  { id: "monkey", emoji: "🐒", name: "Monkey", says: "Ooh ooh aah aah!", words: ["monkey", "bandar", "बंदर"] },
+  { id: "pig", emoji: "🐷", name: "Pig", says: "Oink oink!", words: ["pig", "piggy", "suar", "सूअर"] },
+  { id: "peacock", emoji: "🦚", name: "Peacock", says: "Mee-aow!", words: ["peacock", "mor", "मोर"] },
+  { id: "wolf", emoji: "🐺", name: "Wolf", says: "Ow-ooo!", words: ["wolf", "bhediya", "भेड़िया", "भेडिया"] },
+  { id: "crow", emoji: "🐦", name: "Crow", says: "Caw caw!", words: ["crow", "kauwa", "kaua", "kawa", "कौआ", "कौवा"], dark: true },
+  { id: "cuckoo", emoji: "🐦", name: "Cuckoo", says: "Koo-hoo!", words: ["cuckoo", "koyal", "koel", "कोयल"] },
+  { id: "bee", emoji: "🐝", name: "Bee", says: "Bzzzz!", words: ["bee", "honeybee", "madhumakhi", "मधुमक्खी"] },
+  { id: "parrot", emoji: "🦜", name: "Parrot", says: "Squawk!", words: ["parrot", "tota", "tauta", "तोता"] },
+];
+
+const animalAudio = new Audio();
+const soundCache = {};
+let animalId = 0;
+let playingCard = null;
+
+function buildAnimalGrid() {
+  for (let a of animals) {
+    let card = document.createElement("button");
+    card.className = "animal" + (a.dark ? " dark" : "");
+    card.dataset.id = a.id;
+    card.innerHTML = '<span class="aEmoji"></span><span class="aName"></span>';
+    card.querySelector(".aEmoji").innerText = a.emoji;
+    card.querySelector(".aName").innerText = a.name;
+    card.onclick = () => (playingCard == card ? stopAnimal() : playAnimal(a));
+    animalGrid.appendChild(card);
+  }
+}
+
+// load the sound as a whole file so the offline cache can keep it
+function soundUrl(a) {
+  if (!soundCache[a.id]) {
+    soundCache[a.id] = fetch("sounds/" + a.id + ".mp3")
+      .then((r) => {
+        if (!r.ok) throw new Error("no sound");
+        return r.blob();
+      })
+      .then((blob) => URL.createObjectURL(blob))
+      .catch((e) => {
+        delete soundCache[a.id];
+        throw e;
+      });
+  }
+  return soundCache[a.id];
+}
+
+function stopAnimal() {
+  animalId++;
+  animalAudio.onended = null;
+  animalAudio.pause();
+  if (playingCard) playingCard.classList.remove("playing");
+  playingCard = null;
+}
+
+async function playAnimal(a) {
+  buzz();
+  stopAnimal();
+  hush();
+  let id = animalId;
+  let card = animalGrid.querySelector('[data-id="' + a.id + '"]');
+  card.classList.add("playing");
+  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  playingCard = card;
+  bubble.innerText = a.emoji + " " + a.name + " says " + a.says;
+
+  let url;
+  try {
+    url = await soundUrl(a);
+  } catch (e) {
+    if (id == animalId) {
+      stopAnimal();
+      speak("Oops! I can't play that sound right now. 📶");
+    }
+    return;
+  }
+  if (id != animalId) return;
+
+  let plays = 0;
+  animalAudio.src = url;
+  animalAudio.currentTime = 0;
+  animalAudio.onended = function () {
+    if (id != animalId) return;
+    plays++;
+    // very short sounds (pig, elephant) play twice so kids don't miss them
+    if (animalAudio.duration < 1.6 && plays < 2) {
+      animalAudio.currentTime = 0;
+      animalAudio.play().catch(() => {});
+      return;
+    }
+    stopAnimal();
+    speak("The " + a.name.toLowerCase() + " says " + a.says);
+  };
+  animalAudio.play().catch(() => {
+    if (id == animalId) stopAnimal();
+  });
+}
+
+function animalCommand(heard) {
+  let sentence = " " + heard.toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u).join(" ") + " ";
+  let found = animals.find((a) => a.words.some((w) => sentence.includes(" " + w + " ")));
+  if (found) playAnimal(found);
+  else speak("I don't know that animal's sound yet. Try lion, dog or cat! 🐾");
+}
+
 // ---------- Brain ----------
 
 function think(heard, otherGuesses = []) {
@@ -834,6 +959,7 @@ function think(heard, otherGuesses = []) {
     return;
   }
   if (mode == "picture") showPicture(heard, otherGuesses);
+  else if (mode == "animals") animalCommand(heard);
   else lightCommand(heard);
 }
 
@@ -861,7 +987,7 @@ let updateReady = false;
 
 function busy() {
   let talking = "speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending);
-  return listening || talking || disco || !cardLoading.hidden;
+  return listening || talking || disco || !cardLoading.hidden || !animalAudio.paused;
 }
 
 function whenIdle() {
@@ -923,8 +1049,8 @@ installBtn.onclick = async function () {
   // no one-tap install on this browser: show how to do it by hand
   let iphone = /iphone|ipad|ipod/i.test(navigator.userAgent);
   installHelp.innerText = iphone
-    ? "नीचे ⬆️ Share दबाओ, फिर \"Add to Home Screen\" दबाओ।"
-    : "ऊपर ⋮ मेन्यू दबाओ, फिर \"Install app\" या \"Add to Home screen\" दबाओ।";
+    ? "Tap ⬆️ Share below, then \"Add to Home Screen\"."
+    : "Tap the ⋮ menu at the top, then \"Install app\" or \"Add to Home screen\".";
   installHelp.hidden = false;
   installBtn.hidden = true;
 };
@@ -933,7 +1059,7 @@ $("installLater").onclick = () => (installBox.hidden = true);
 
 window.addEventListener("appinstalled", () => {
   installBox.hidden = true;
-  speak("ऐप फ़ोन में आ गया! अब होम स्क्रीन से खोलो। 🎉");
+  speak("The app is on your phone! Open it from the home screen. 🎉");
 });
 
 // Chrome usually offers one-tap install within a second; if not, show the popup anyway
@@ -941,5 +1067,7 @@ setTimeout(showInstallBox, 2500);
 
 // ---------- Start ----------
 
-pick(mode);
+buildAnimalGrid();
+history.replaceState(null, "");
+pick("home");
 setLight(load("sv-light", OFF_COLOR), false);
