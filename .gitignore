@@ -1,0 +1,4 @@
+# old backup, not part of the app
+*.zip
+netlify-upload/
+.netlify/

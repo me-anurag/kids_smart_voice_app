@@ -1,0 +1,27 @@
+# Netlify settings for SmartVoice (static site)
+# Every push to GitHub: Netlify stamps the commit id into version.js, then publishes.
+[build]
+  publish = "."
+  command = "sed -i \"s/const BUILD = \\\"dev\\\"/const BUILD = \\\"${COMMIT_REF:0:7}\\\"/\" version.js"
+
+# Always check for a new service worker / version so phones update quickly
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/version.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "microphone=(self), screen-wake-lock=(self)"
