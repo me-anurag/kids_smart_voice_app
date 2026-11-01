@@ -16,6 +16,7 @@ const cardLoading = $("cardLoading");
 const photo = $("photo");
 const photoTitle = $("photoTitle");
 const bubble = $("bubble");
+const buddy = $("buddy");
 const sound = $("sound");
 const volume = $("volume");
 const hints = $("hints");
@@ -66,7 +67,10 @@ function speak(words) {
   bubble.innerText = words;
   bubble.scrollTop = 0;
 
-  if (!("speechSynthesis" in window)) return;
+  if (!("speechSynthesis" in window)) {
+    wiggleBuddy();
+    return;
+  }
 
   // don't read emoji out loud
   let spoken = words.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "");
@@ -79,9 +83,26 @@ function speak(words) {
     let done = event.charIndex / spoken.length;
     bubble.scrollTop = done * (bubble.scrollHeight - bubble.clientHeight);
   };
-  voice.onend = whenIdle;
+  // the mascot wiggles while it talks
+  currentVoice = voice;
+  voice.onstart = () => buddy.classList.add("talking");
+  voice.onend = voice.onerror = function () {
+    if (currentVoice != voice) return; // an older sentence that was cut off
+    buddy.classList.remove("talking");
+    whenIdle();
+  };
   speechSynthesis.cancel();
   speechSynthesis.speak(voice);
+  wiggleBuddy();
+}
+
+let currentVoice = null;
+
+function wiggleBuddy() {
+  buddy.classList.add("talking");
+  setTimeout(() => {
+    if (!("speechSynthesis" in window) || !speechSynthesis.speaking) buddy.classList.remove("talking");
+  }, 1200);
 }
 
 function hush() {

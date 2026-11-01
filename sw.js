@@ -17,6 +17,8 @@ const FILES = [
   "icons/icon-512.png",
   "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png",
+  "icons/mascot.png",
+  "icons/mascot-scene.png",
 ];
 
 self.addEventListener("install", (event) => {

@@ -20,6 +20,20 @@
 
 <body class="mode-light">
 
+<!-- twinkling sparkles in the background -->
+<div id="sky" aria-hidden="true">
+  <i style="left:8%;top:14%"></i>
+  <i style="left:88%;top:10%;animation-delay:.8s"></i>
+  <i style="left:76%;top:34%;animation-delay:1.6s"></i>
+  <i style="left:5%;top:46%;animation-delay:2.2s"></i>
+  <i style="left:92%;top:58%;animation-delay:.4s"></i>
+  <i style="left:14%;top:72%;animation-delay:1.2s"></i>
+  <i style="left:58%;top:24%;animation-delay:2.6s"></i>
+  <i style="left:84%;top:84%;animation-delay:1.9s"></i>
+  <b style="left:-40px;top:22%"></b>
+  <b style="right:-60px;top:62%;animation-delay:-4s"></b>
+</div>
+
 <header id="topbar">
   <button id="menuBtn" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -33,7 +47,8 @@
   <!-- Light mode -->
   <section id="lightView" class="view">
     <div id="bulbWrap">
-      <div id="bulb"></div>
+      <div id="rays"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div id="bulb"><div class="filament"></div></div>
       <div id="bulbBase"></div>
     </div>
   </section>
@@ -42,19 +57,25 @@
   <section id="pictureView" class="view" hidden>
     <div id="card">
       <div id="cardEmpty">
-        <div class="bigEmoji">🦁🚀🌈</div>
+        <img src="icons/mascot-scene.png" alt="" class="scene">
         <div>किसी भी चीज़ का नाम बोलो!</div>
       </div>
       <div id="cardLoading" hidden>
-        <div class="searchEmoji">🔍</div>
-        <div>ढूँढ रहे हैं...</div>
+        <div class="seeker">
+          <img src="icons/mascot.png" alt="">
+          <span>🔍</span>
+        </div>
+        <div>ढूँढ रहे हैं<span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
       </div>
       <img id="photo" alt="" hidden>
       <h2 id="photoTitle" hidden></h2>
     </div>
   </section>
 
-  <p id="bubble">नमस्ते! 👋</p>
+  <div id="talkRow">
+    <img id="buddy" src="icons/mascot.png" alt="">
+    <p id="bubble">नमस्ते! 👋</p>
+  </div>
 
   <div id="sound" hidden>
     🔊 <input id="volume" type="range" min="0" max="1" step="0.1" value="1">
@@ -64,17 +85,26 @@
 </main>
 
 <footer id="bottom">
-  <button id="talk" aria-label="बोलो">
-    <span class="ring"></span>
-    <span class="micIcon">🎤</span>
-  </button>
+  <div id="micWrap">
+    <span class="wave left w1"></span>
+    <span class="wave left w2"></span>
+    <button id="talk" aria-label="बोलो">
+      <span class="ring"></span>
+      <span class="micIcon">🎤</span>
+    </button>
+    <span class="wave right w1"></span>
+    <span class="wave right w2"></span>
+  </div>
   <div id="talkLabel">दबाओ और बोलो!</div>
 </footer>
 
 <!-- Slide-in menu -->
 <div id="overlay" hidden></div>
 <nav id="drawer" aria-hidden="true">
-  <div id="drawerTitle">🌈 क्या खेलें?</div>
+  <div id="drawerHead">
+    <img src="icons/mascot.png" alt="">
+    <div id="drawerTitle">क्या खेलें?</div>
+  </div>
   <button class="tile" data-mode="light">
     <span class="tileEmoji">💡</span>
     <span class="tileName">बत्ती</span>
@@ -85,13 +115,14 @@
     <span class="tileName">तस्वीरें</span>
     <span class="tick">✔</span>
   </button>
+  <div id="drawerRainbow"></div>
   <div id="version"></div>
 </nav>
 
 <!-- Install popup: shown when the link is opened in the browser -->
 <div id="installBox" hidden>
   <div id="installCard">
-    <img src="icons/icon-192.png" alt="" id="installIcon">
+    <img src="icons/mascot-scene.png" alt="" id="installIcon">
     <div id="installTitle">Bolo Bolo</div>
     <div id="installText">फ़ोन में ऐप डालो और खेलो!</div>
     <button id="installBtn">📲 ऐप इंस्टॉल करो</button>
