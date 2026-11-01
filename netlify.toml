@@ -2,6 +2,7 @@
 # Every push to GitHub: Netlify stamps the commit id into version.js, then publishes.
 [build]
   publish = "."
+  functions = "netlify/functions"
   command = "sed -i \"s/const BUILD = \\\"dev\\\"/const BUILD = \\\"${COMMIT_REF:0:7}\\\"/\" version.js"
 
 # Always check for a new service worker / version so phones update quickly

@@ -20,6 +20,8 @@ const FILES = [
   "icons/mascot.png",
   "icons/mascot-scene.png",
   "credits.html",
+  "talk/talk.js",
+  "talk/talk.css",
   "sounds/bee.mp3",
   "sounds/cat.mp3",
   "sounds/cow.mp3",

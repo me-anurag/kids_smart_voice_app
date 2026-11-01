@@ -224,7 +224,7 @@ const MODES = {
 
 // Pictures talks in Hindi, everything else in English
 function hindiMode() {
-  return mode == "picture" || mode == "welcome";
+  return mode == "picture" || mode == "welcome" || mode == "talk";
 }
 
 function tr(hindi, english) {
@@ -259,6 +259,7 @@ function pick(name) {
   hush();
   if (listening && mic) mic.abort();
 
+  if (MODES[mode] && MODES[mode].leave) MODES[mode].leave();
   mode = name;
   body.className = "mode-" + name;
   home.hidden = name != "home";
@@ -279,6 +280,7 @@ function pick(name) {
   showHints(m.hints);
   bubble.innerText = m.hello;
   setTalkLabel();
+  if (m.enter) m.enter();
 }
 
 function openMode(name) {
@@ -1161,7 +1163,7 @@ let updateReady = false;
 
 function busy() {
   let talking = "speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending);
-  return listening || talking || disco || !cardLoading.hidden || !animalAudio.paused;
+  return listening || talking || disco || !cardLoading.hidden || !animalAudio.paused || (window.talkIsBusy && talkIsBusy());
 }
 
 function whenIdle() {

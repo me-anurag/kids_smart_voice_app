@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="talk/talk.css">
 </head>
 
 <body class="mode-welcome">
@@ -51,6 +52,10 @@
     <button class="homeTile" data-mode="animals">
       <span class="tileEmoji">🐾</span>
       <span class="tileName">Animal Sounds</span>
+    </button>
+    <button class="homeTile" data-mode="talk">
+      <span class="tileEmoji">💬</span>
+      <span class="tileName">Talk</span>
     </button>
   </div>
   <button id="changeName">🔄 Change</button>
@@ -96,6 +101,36 @@
   <!-- Animal sounds -->
   <section id="animalView" class="view" hidden>
     <div id="animalGrid"></div>
+  </section>
+
+  <!-- Talk with Bolo (talk/talk.js) -->
+  <section id="talkView" class="view" hidden>
+    <div id="talkBox">
+      <div id="tTop"><span id="tStars">⭐ 0</span></div>
+      <div id="tStage">
+        <img id="tMascot" class="tMascot happy" src="icons/mascot.png" alt="">
+        <div id="tPicture" hidden><img alt=""></div>
+      </div>
+      <p id="tSay">नमस्ते! 👋</p>
+      <p id="tHeard"></p>
+      <div id="tMenu">
+        <button class="tGame" data-game="chat"><span>🗣️</span>बातें</button>
+        <button class="tGame" data-game="quiz"><span>🧠</span>क्विज़</button>
+        <button class="tGame" data-game="story"><span>📖</span>कहानी</button>
+        <button class="tGame" data-game="riddle"><span>🤔</span>पहेली</button>
+      </div>
+      <div id="tPlay" hidden>
+        <div id="tOptions"></div>
+      </div>
+      <div id="tControls">
+        <button id="tRepeat" aria-label="फिर से">🔁</button>
+        <div id="tMicWrap">
+          <button id="tMic" aria-label="बोलो">🎤</button>
+          <div id="tMicLabel">दबाओ और बोलो!</div>
+        </div>
+        <button id="tStop" aria-label="बस">🛑</button>
+      </div>
+    </div>
   </section>
 
   <!-- Pictures mode -->
@@ -167,5 +202,6 @@
 <script src="version.js"></script>
 <script src="blocklist.js"></script>
 <script src="app.js"></script>
+<script src="talk/talk.js"></script>
 </body>
 </html>
