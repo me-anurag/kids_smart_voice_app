@@ -131,11 +131,11 @@ if (Recognition) {
   mic = new Recognition();
   mic.lang = "en-IN";
   mic.interimResults = false;
-  mic.maxAlternatives = 1;
+  mic.maxAlternatives = 3;
 
   mic.onresult = function (event) {
-    let heard = event.results[0][0].transcript;
-    think(heard.toLowerCase().trim());
+    let guesses = [...event.results[0]].map((r) => r.transcript.toLowerCase().trim());
+    think(guesses[0], guesses.slice(1));
   };
 
   mic.onerror = function (event) {
@@ -357,27 +357,119 @@ let searchId = 0;
 function wiki(lang, params) {
   let url = "https://" + lang + ".wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1";
   for (let key in params) url += "&" + key + "=" + encodeURIComponent(params[key]);
-  return fetch(url).then((r) => r.json());
+  return fetch(url)
+    .then((r) => r.json())
+    .catch((e) => {
+      if (navigator.onLine) throw new Error("busy"); // Wikipedia says "too many requests"
+      throw e;
+    });
 }
 
-const englishInfo = { prop: "pageimages|langlinks|pageprops|extracts", piprop: "thumbnail|name", pithumbsize: 960, lllang: "hi", ppprop: "disambiguation", exintro: 1, explaintext: 1, exsentences: 2 };
-const hindiInfo = { prop: "pageimages|extracts|pageprops", piprop: "thumbnail|name", pithumbsize: 960, exintro: 1, explaintext: 1, ppprop: "disambiguation" };
+const englishInfo = {
+  prop: "pageimages|langlinks|pageprops|extracts|description", piprop: "thumbnail|name", pithumbsize: 960,
+  lllang: "hi", lllimit: "max", ppprop: "disambiguation", exintro: 1, explaintext: 1, exsentences: 2, exlimit: "max",
+};
+const hindiInfo = {
+  prop: "pageimages|langlinks|pageprops|extracts|description", piprop: "thumbnail|name", pithumbsize: 960,
+  lllang: "en", lllimit: "max", ppprop: "disambiguation", exintro: 1, explaintext: 1, exlimit: "max",
+};
 
-function goodPage(data) {
-  let page = data.query && data.query.pages && data.query.pages[0];
-  if (!page || page.missing || page.invalid) return null;
-  if (page.pageprops && "disambiguation" in page.pageprops) return null;
-  return page;
-}
-
-async function findEnglish(name) {
-  let page = goodPage(await wiki("en", { titles: name, ...englishInfo }));
-  if (!page) page = goodPage(await wiki("en", { generator: "search", gsrsearch: name, gsrlimit: 1, ...englishInfo }));
-  return page;
+function goodPages(data) {
+  let pages = (data && data.query && data.query.pages) || [];
+  return pages.filter((p) => !p.missing && !p.invalid && !(p.pageprops && "disambiguation" in p.pageprops));
 }
 
 async function findHindi(params) {
-  return goodPage(await wiki("hi", { ...params, ...hindiInfo }));
+  return goodPages(await wiki("hi", { ...params, ...hindiInfo }))[0] || null;
+}
+
+// ---------- Finding what the kid meant ----------
+
+// Hinglish -> Hindi letters: "hathi" -> ["हठी", "हाथी", ...] (Google Input Tools)
+async function toDevanagari(word) {
+  try {
+    let url = "https://inputtools.google.com/request?itc=hi-t-i0-und&num=4&cp=0&cs=1&ie=utf-8&oe=utf-8&text=" + encodeURIComponent(word);
+    let data = await fetch(url).then((r) => r.json());
+    return data[0] == "SUCCESS" ? data[1][0][1] : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// what a page is about, from its Wikipedia short description
+const KID_THING = /\b(species|animals?|cats?|dogs?|horses?|cows?|domesticated|carnivor|herbivor|mammals?|birds?|fish|reptiles?|amphibians?|insects?|spiders?|plants?|trees?|flowers?|fruits?|vegetables?|food|dish|drinks?|beverage|sweets?|dessert|vehicles?|aircraft|cars?|ships?|boats?|trains?|machines?|tools?|devices?|instruments?|objects?|containers?|furniture|toys?|games?|sports?|planets?|stars?|moon|natural satellite|galaxy|weather|river|mountain|lake|ocean|sea|island|desert|forest|monument|building|temple|fort|city|country|capital|colou?r|shape|festival|dinosaurs?|genus|family of|clothing|garment|utensil|household|kitchen)/i;
+const NOT_KID_THING = /\b(company|corporation|manufacturer|brand|businesses?|film|movie|album|songs?|single|band|singer|musician|rapper|actor|actress|politician|footballer|cricketer|player|athlete|novel|book|magazine|newspaper|journal|television|tv|series|episode|video game|software|website|organi[sz]ation|political party|surname|given name|family name|village|municipality|tehsil|census|topics referred|library|record label|journalist|businessman|writer|poet|author|director|producer|character)\b/i;
+
+function meaningScore(description) {
+  if (!description) return 0;
+  if (/\(\d{4}|\bborn\b|\bdied\b/i.test(description)) return -4; // a person
+  if (NOT_KID_THING.test(description)) return -4;
+  if (KID_THING.test(description)) return 3;
+  return 0;
+}
+
+// Collect possible meanings from English Wikipedia and (for Hinglish) Hindi Wikipedia,
+// then pick the one a kid most likely means: an animal/thing/place, not a film or a person.
+async function findTopic(name) {
+  let latin = !/[ऀ-ॿ]/.test(name);
+  let topics = new Map(); // key: English title (or "hi:" + Hindi title)
+
+  function add(key, en, hi, points) {
+    let t = topics.get(key) || { en: null, hi: null, score: 0 };
+    t.en = t.en || en;
+    t.hi = t.hi || hi;
+    t.score += points;
+    topics.set(key, t);
+  }
+
+  let [exact, search, hindiWords] = await Promise.all([
+    latin ? wiki("en", { titles: name, ...englishInfo }).then(goodPages) : [],
+    latin ? wiki("en", { generator: "search", gsrsearch: name, gsrlimit: 5, ...englishInfo }).then(goodPages) : [],
+    latin ? toDevanagari(name) : [name],
+  ]);
+
+  for (let p of exact) add(p.title, p, null, 3);
+  for (let p of search) add(p.title, p, null, 2 - (p.index - 1) * 0.4);
+
+  // Hindi pages: exact titles for the Hindi spellings, plus a search when the kid's words are in Hindi letters
+  let hindiPages = [];
+  if (hindiWords.length) {
+    let spellings = hindiWords.slice(0, 3);
+    let found = await wiki("hi", { titles: spellings.join("|"), ...hindiInfo }).then(goodPages).catch(() => []);
+    for (let p of found) {
+      let rank = spellings.indexOf(p.title);
+      hindiPages.push({ page: p, points: 3 - Math.max(rank, 0) * 0.3 });
+    }
+    if (!latin) {
+      let hits = await wiki("hi", { generator: "search", gsrsearch: name, gsrlimit: 3, ...hindiInfo }).then(goodPages).catch(() => []);
+      for (let p of hits) hindiPages.push({ page: p, points: 2 - (p.index - 1) * 0.5 });
+    } else if (!found.length) {
+      // no Hindi page with that exact name ("चांद" is called "चन्द्रमा") - search for it instead
+      let hits = await wiki("hi", { generator: "search", gsrsearch: spellings[0], gsrlimit: 2, ...hindiInfo }).then(goodPages).catch(() => []);
+      for (let p of hits) hindiPages.push({ page: p, points: 1.5 - (p.index - 1) * 0.5 });
+    }
+  }
+
+  // Hindi pages point to their English page; fetch those so all meanings can be compared
+  let englishTitles = hindiPages.map((h) => h.page.langlinks && h.page.langlinks[0].title).filter(Boolean);
+  let englishOfHindi = englishTitles.length
+    ? await wiki("en", { titles: englishTitles.join("|"), ...englishInfo }).then(goodPages).catch(() => [])
+    : [];
+  for (let h of hindiPages) {
+    let enTitle = h.page.langlinks && h.page.langlinks[0].title;
+    let en = englishOfHindi.find((p) => p.title == enTitle) || null;
+    add(en ? en.title : "hi:" + h.page.title, en, h.page, h.points);
+  }
+
+  let best = null;
+  for (let t of topics.values()) {
+    let description = (t.en && t.en.description) || (t.hi && t.hi.description);
+    t.score += meaningScore(description);
+    if (t.en && t.en.langlinks) t.score += 1.5; // everyday things usually have a Hindi page too
+    if (isBlocked(t.en && t.en.title) || isBlocked(t.hi && t.hi.title) || isBlocked(description)) continue;
+    if (!best || t.score > best.score) best = t;
+  }
+  return best;
 }
 
 function shortHindi(extract) {
@@ -641,7 +733,20 @@ function tada() {
 
 // ---------- Search ----------
 
-async function showPicture(name) {
+async function findTopicFor(guesses) {
+  let best = null;
+  let tried = new Set();
+  for (let guess of guesses) {
+    if (!guess || tried.has(guess) || isBlocked(guess) || tried.size >= 3) continue;
+    tried.add(guess);
+    let topic = await findTopic(guess);
+    if (topic && (!best || topic.score > best.score)) best = topic;
+    if (best && best.score >= 4) break; // clearly found it
+  }
+  return best;
+}
+
+async function showPicture(name, otherGuesses = []) {
   let id = ++searchId;
   if (isBlocked(name)) {
     showEmpty();
@@ -658,19 +763,16 @@ async function showPicture(name) {
   bubble.innerText = "🔍 " + name + " ढूँढ रहे हैं...";
 
   try {
-    let english = await findEnglish(name);
+    let topic = await findTopicFor([name, ...otherGuesses]);
     if (id != searchId) return;
+    let english = topic && topic.en;
+    let hindi = topic && topic.hi;
 
     // fetch extra photos while the Hindi text loads
     let more = english ? articlePictures("en", english.title) : null;
 
-    let hindi = null;
-    if (english && english.langlinks) {
+    if (!hindi && english && english.langlinks) {
       hindi = await findHindi({ titles: english.langlinks[0].title });
-    } else if (!english && /[ऀ-ॿ]/.test(name)) {
-      // the kid's words came out in Hindi letters - search Hindi Wikipedia directly.
-      // (never search it with English words: it returns unrelated articles)
-      hindi = await findHindi({ generator: "search", gsrsearch: name, gsrlimit: 1 });
     }
     if (id != searchId) return;
 
@@ -715,13 +817,14 @@ async function showPicture(name) {
   } catch (e) {
     if (id != searchId) return;
     showEmpty();
-    speak("इंटरनेट में कुछ गड़बड़ है, फिर से कोशिश करो। 📶");
+    if (e.message == "busy") speak("थोड़ा रुको, फिर से बोलो! ⏳");
+    else speak("इंटरनेट में कुछ गड़बड़ है, फिर से कोशिश करो। 📶");
   }
 }
 
 // ---------- Brain ----------
 
-function think(heard) {
+function think(heard, otherGuesses = []) {
   if (!heard) return;
   stopParty();
 
@@ -730,7 +833,7 @@ function think(heard) {
     safeReply();
     return;
   }
-  if (mode == "picture") showPicture(heard);
+  if (mode == "picture") showPicture(heard, otherGuesses);
   else lightCommand(heard);
 }
 

@@ -1119,3 +1119,9 @@ body.mode-picture #bubble {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* very small phones: drop the mode label so the name fits */
+@media (max-width: 350px) {
+  #modeChip { display: none; }
+  #appName { font-size: 23px; }
+}
