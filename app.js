@@ -13,7 +13,11 @@ const pictureView = $("pictureView");
 const card = $("card");
 const cardEmpty = $("cardEmpty");
 const cardLoading = $("cardLoading");
-const photo = $("photo");
+const polaroid = $("polaroid");
+const slidesBox = $("slides");
+const track = $("track");
+const dots = $("dots");
+const burst = $("burst");
 const photoTitle = $("photoTitle");
 const bubble = $("bubble");
 const buddy = $("buddy");
@@ -208,6 +212,7 @@ function pick(name) {
   mode = name;
   save("sv-mode", name);
   stopParty();
+  stopSlides();
   hush();
 
   body.className = "mode-" + name;
@@ -355,8 +360,8 @@ function wiki(lang, params) {
   return fetch(url).then((r) => r.json());
 }
 
-const englishInfo = { prop: "pageimages|langlinks|pageprops", piprop: "thumbnail", pithumbsize: 800, lllang: "hi", ppprop: "disambiguation" };
-const hindiInfo = { prop: "pageimages|extracts|pageprops", piprop: "thumbnail", pithumbsize: 800, exintro: 1, explaintext: 1, ppprop: "disambiguation" };
+const englishInfo = { prop: "pageimages|langlinks|pageprops", piprop: "thumbnail|name", pithumbsize: 960, lllang: "hi", ppprop: "disambiguation" };
+const hindiInfo = { prop: "pageimages|extracts|pageprops", piprop: "thumbnail|name", pithumbsize: 960, exintro: 1, explaintext: 1, ppprop: "disambiguation" };
 
 function goodPage(data) {
   let page = data.query && data.query.pages && data.query.pages[0];
@@ -383,35 +388,229 @@ function shortHindi(extract) {
   return text ? text + "।" : "";
 }
 
+// ---------- Choosing good pictures ----------
+
+const TINY = 350; // smaller than this looks blurry on a phone
+const MAX_PICTURES = 5;
+// file names that are usually maps, logos, diagrams... not real photos
+const NOT_PHOTO = /(map|locator|range|distribution|logo|flag|icon|symbol|emblem|coat.of.arms|seal|diagram|chart|graph|plot|signature|stamp|banknote|coin|commons|wiki|question|ambox|portal|stub|clado|phylo|template|\.svg)/i;
+
+function fileName(title) {
+  return (title || "").replace(/^[^:]*:/, "").replace(/_/g, " ");
+}
+
+function leadPicture(page) {
+  if (!page || !page.thumbnail) return null;
+  let t = page.thumbnail;
+  return { name: fileName(page.pageimage), url: t.source, w: t.width, h: t.height };
+}
+
+// more photos from the same Wikipedia article
+async function articlePictures(lang, title) {
+  try {
+    let data = await wiki(lang, {
+      generator: "images", titles: title, gimlimit: 50,
+      prop: "imageinfo", iiprop: "url|size|mime", iiurlwidth: 960,
+    });
+    let pages = (data.query && data.query.pages) || [];
+    return pages
+      .map((p) => {
+        let info = p.imageinfo && p.imageinfo[0];
+        return info && { name: fileName(p.title), url: info.thumburl || info.url, w: info.width, h: info.height, mime: info.mime };
+      })
+      .filter((p) => p && p.mime == "image/jpeg" && p.w >= 400 && p.h >= 300 &&
+        p.w / p.h < 2.2 && p.h / p.w < 1.8 && !NOT_PHOTO.test(p.name) && !isBlocked(p.name))
+      .sort((a, b) => b.w * b.h - a.w * a.h);
+  } catch (e) {
+    return [];
+  }
+}
+
+function choosePictures(lead, more) {
+  if (lead && isBlocked(lead.name)) lead = null;
+  let list = [];
+  if (lead && Math.max(lead.w, lead.h) >= TINY && !NOT_PHOTO.test(lead.name)) list.push(lead);
+  for (let p of more) {
+    if (list.length >= MAX_PICTURES) break;
+    if (lead && p.name.toLowerCase() == lead.name.toLowerCase()) continue;
+    list.push(p);
+  }
+  if (!list.length && lead) list.push(lead); // small or map-like, but better than nothing
+  return list;
+}
+
+// tiny copy of the picture for the blurred background
+function smallUrl(url) {
+  return url.replace(/\/\d+px-/, "/120px-");
+}
+
+// ---------- Picture card: frame, swipe, zoom ----------
+
+let slideIndex = 0;
+let slideTimer = null;
+
 function showLoading() {
+  stopSlides();
   cardEmpty.hidden = true;
-  photo.hidden = true;
-  photoTitle.hidden = true;
+  polaroid.hidden = true;
+  dots.hidden = true;
+  card.classList.remove("hasPhoto");
   cardLoading.hidden = false;
 }
 
 function showEmpty() {
+  stopSlides();
   cardLoading.hidden = true;
-  photo.hidden = true;
-  photoTitle.hidden = true;
+  polaroid.hidden = true;
+  dots.hidden = true;
+  card.classList.remove("hasPhoto");
   cardEmpty.hidden = false;
 }
 
-function showResult(title, imageUrl) {
+function slides() {
+  return [...track.children];
+}
+
+function goTo(i) {
+  let all = slides();
+  if (!all.length) return;
+  slideIndex = (i + all.length) % all.length;
+  track.style.transform = "translateX(" + -slideIndex * 100 + "%)";
+  all.forEach((s, n) => s.classList.toggle("active", n == slideIndex));
+  [...dots.children].forEach((d, n) => d.classList.toggle("on", n == slideIndex));
+}
+
+function renderDots() {
+  dots.innerHTML = "";
+  for (let i = 0; i < slides().length; i++) dots.appendChild(document.createElement("i"));
+  dots.hidden = slides().length < 2;
+  goTo(Math.min(slideIndex, slides().length - 1));
+}
+
+function stopSlides() {
+  clearInterval(slideTimer);
+  slideTimer = null;
+}
+
+function startSlides() {
+  stopSlides();
+  slideTimer = setInterval(() => goTo(slideIndex + 1), 5000);
+}
+
+function makeSlide(picture) {
+  let slide = document.createElement("div");
+  slide.className = "slide";
+  let bg = new Image();
+  bg.className = "bg";
+  bg.alt = "";
+  bg.src = smallUrl(picture.url);
+  let pic = new Image();
+  pic.className = "pic";
+  pic.alt = "";
+  pic.src = picture.url;
+  slide.append(bg, pic);
+  return { slide, pic };
+}
+
+// resolves when the picture has loaded (or failed / took too long)
+function loaded(img) {
+  return new Promise((done) => {
+    if (img.complete && img.naturalWidth) return done(true);
+    img.addEventListener("load", () => done(true));
+    img.addEventListener("error", () => done(false));
+    setTimeout(() => done(img.naturalWidth > 0), 8000);
+  });
+}
+
+async function showResult(title, pictures, id) {
+  track.innerHTML = "";
+  slideIndex = 0;
+  track.style.transform = "";
+  if (!pictures.length) pictures = [{ url: "icons/mascot-scene.png" }];
+
+  let first = null;
+  for (let p of pictures) {
+    let { slide, pic } = makeSlide(p);
+    track.appendChild(slide);
+    if (!first) first = pic;
+    // a broken picture just disappears from the swipe list
+    pic.addEventListener("error", () => {
+      slide.remove();
+      if (!slides().length) track.appendChild(makeSlide({ url: "icons/mascot-scene.png" }).slide);
+      renderDots();
+    });
+  }
+
+  await loaded(first);
+  if (id != searchId) return;
+
+  photoTitle.innerText = title;
   cardLoading.hidden = true;
   cardEmpty.hidden = true;
-  photoTitle.innerText = title;
-  photoTitle.hidden = false;
-  if (imageUrl) {
-    photo.src = imageUrl;
-    photo.hidden = false;
-  } else {
-    photo.hidden = true;
-  }
-  card.classList.remove("bounce");
-  void card.offsetWidth;
-  card.classList.add("bounce");
+  card.classList.add("hasPhoto");
+  polaroid.hidden = false;
+  renderDots();
+  polaroid.classList.remove("show");
+  void polaroid.offsetWidth;
+  polaroid.classList.add("show");
+  sparkleBurst();
+  tada();
+  if (slides().length > 1) startSlides();
 }
+
+// swipe left/right, or tap for the next picture
+let swipeX = null;
+
+slidesBox.addEventListener("pointerdown", (e) => (swipeX = e.clientX));
+slidesBox.addEventListener("pointerup", (e) => {
+  if (swipeX == null) return;
+  let dx = e.clientX - swipeX;
+  swipeX = null;
+  if (slides().length < 2) return;
+  buzz();
+  stopSlides(); // the kid is choosing now
+  goTo(slideIndex + (dx > 40 ? -1 : 1));
+});
+
+// ---------- Ta-da! ----------
+
+function sparkleBurst() {
+  burst.innerHTML = "";
+  let colors = ["#ffd60a", "#ff5fd2", "#2ec5ff", "#7bed3f", "#ff9f1a", "#ffffff"];
+  for (let i = 0; i < 16; i++) {
+    let s = document.createElement("i");
+    let angle = (i / 16) * Math.PI * 2;
+    let dist = 110 + Math.random() * 70;
+    s.style.setProperty("--dx", Math.cos(angle) * dist + "px");
+    s.style.setProperty("--dy", Math.sin(angle) * dist + "px");
+    s.style.setProperty("--c", colors[i % colors.length]);
+    burst.appendChild(s);
+  }
+}
+
+let audio = null;
+
+function tada() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    let t = audio.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      let osc = audio.createOscillator();
+      let gain = audio.createGain();
+      let start = t + i * 0.09;
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.16, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + (i == 3 ? 0.6 : 0.25));
+      osc.connect(gain).connect(audio.destination);
+      osc.start(start);
+      osc.stop(start + 0.7);
+    });
+  } catch (e) {}
+}
+
+// ---------- Search ----------
 
 async function showPicture(name) {
   let id = ++searchId;
@@ -433,6 +632,9 @@ async function showPicture(name) {
     let english = await findEnglish(name);
     if (id != searchId) return;
 
+    // fetch extra photos while the Hindi text loads
+    let more = english ? articlePictures("en", english.title) : null;
+
     let hindi = null;
     if (english && english.langlinks) {
       hindi = await findHindi({ titles: english.langlinks[0].title });
@@ -451,7 +653,6 @@ async function showPicture(name) {
 
     let title = hindi ? hindi.title : english.title;
     let text = hindi ? shortHindi(hindi.extract) : "";
-    let image = (english && english.thumbnail) || (hindi && hindi.thumbnail);
 
     if (isBlocked(english && english.title) || isBlocked(title) || isBlocked(text)) {
       showEmpty();
@@ -459,7 +660,13 @@ async function showPicture(name) {
       return;
     }
 
-    showResult(title, image && image.source);
+    if (!more) more = articlePictures("hi", hindi.title);
+    let lead = leadPicture(english) || leadPicture(hindi);
+    let pictures = choosePictures(lead, await more);
+    if (id != searchId) return;
+
+    await showResult(title, pictures, id);
+    if (id != searchId) return;
     speak(text || title + " के बारे में हिंदी में जानकारी नहीं मिली। 📖");
   } catch (e) {
     if (id != searchId) return;
@@ -467,8 +674,6 @@ async function showPicture(name) {
     speak("इंटरनेट में कुछ गड़बड़ है, फिर से कोशिश करो। 📶");
   }
 }
-
-photo.onerror = () => (photo.hidden = true);
 
 // ---------- Brain ----------
 
