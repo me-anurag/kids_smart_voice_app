@@ -211,8 +211,7 @@ button {
 /* ---------- Light bulb ---------- */
 
 #bulbWrap {
-  --glow: #555555;
-  --size: min(52vw, 30vh);
+  --size: min(36vw, 17vh);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -250,10 +249,10 @@ button {
 .filament {
   position: absolute;
   left: 50%;
-  bottom: 12%;
+  top: 12%;
   width: 26%;
   height: 30%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) rotate(180deg);
   border: 5px solid rgba(255, 255, 255, 0.45);
   border-top: none;
   border-radius: 0 0 40% 40%;
@@ -282,8 +281,8 @@ button {
 #bulbBase {
   width: calc(var(--size) * 0.42);
   height: calc(var(--size) * 0.3);
-  margin-top: calc(var(--size) * -0.06);
-  border-radius: 10px 10px 40% 40%;
+  margin-bottom: calc(var(--size) * -0.06);
+  border-radius: 40% 40% 10px 10px;
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.18), rgba(255, 255, 255, 0.5) 35%, rgba(0, 0, 0, 0.2)),
     repeating-linear-gradient(#e8eef2 0 9px, #9fb0bb 9px 13px);
@@ -294,7 +293,7 @@ button {
 #rays {
   position: absolute;
   left: 50%;
-  top: calc(var(--size) / 2);
+  top: calc(var(--size) * 0.74);
   width: 0;
   height: 0;
   opacity: 0;
@@ -351,6 +350,235 @@ button {
   0% { transform: scale(1); }
   40% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+/* ---------- Light room: a dark room, a hanging bulb, the mascot lit by its light ---------- */
+
+body.mode-light {
+  background:
+    radial-gradient(ellipse at 50% -10%, #2a1462 0%, transparent 55%),
+    linear-gradient(180deg, #08031a 0%, #110628 55%, #1a0836 100%);
+}
+
+/* the mascot lives in the room here, not beside the bubble */
+body.mode-light #buddy {
+  display: none;
+}
+
+#lightView {
+  --glow: #555555;
+}
+
+#room {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 30px;
+  background: linear-gradient(180deg, #120a2e 0%, #170c38 70%, #1d1044 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06), inset 0 -30px 60px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* the whole room fills with the light's colour */
+#room::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 28%, var(--glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.5s, background 0.4s;
+  pointer-events: none;
+}
+
+#lightView.on #room::before {
+  opacity: 0.32;
+}
+
+/* the floor and the pool of light on it */
+#floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 13%;
+  background: linear-gradient(180deg, #23124d, #2c175c);
+  border-top: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+#floor::after {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: 0;
+  height: 70%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+#lightView.on #floor::after {
+  opacity: 0.55;
+}
+
+/* hanging lamp: cord + bulb, swinging gently */
+#lamp {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 0;
+  animation: swing 4s ease-in-out infinite alternate;
+}
+
+#lightView.party #lamp {
+  animation-duration: 0.6s;
+}
+
+@keyframes swing {
+  from { transform: rotate(-3deg); }
+  to { transform: rotate(3deg); }
+}
+
+#cord {
+  position: relative;
+  width: 4px;
+  height: 4vh;
+  background: linear-gradient(90deg, #6b6b80, #b8b8cc, #6b6b80);
+}
+
+/* the little cap on the ceiling */
+#cord::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -14px;
+  width: 32px;
+  height: 9px;
+  border-radius: 0 0 16px 16px;
+  background: linear-gradient(#8a8aa0, #4d4d63);
+}
+
+/* the beam of light falling down from the bulb */
+#beam {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--size) * 0.74);
+  width: calc(var(--size) * 3.4);
+  height: 60vh;
+  transform: translateX(-50%);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--glow) 55%, transparent), transparent 85%);
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
+#lightView.on #beam {
+  opacity: 1;
+}
+
+/* ---------- The mascot in the room ---------- */
+
+#lightBuddy {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 4%;
+  width: min(40vw, 18vh);
+}
+
+#lightBuddy img {
+  display: block;
+  width: 100%;
+  transform-origin: 50% 100%;
+  /* in the dark: just a shadow */
+  filter: brightness(0.2) saturate(0.4);
+  transition: filter 0.5s;
+}
+
+#lightView.on #lightBuddy img {
+  filter: brightness(1.05) saturate(1.1) drop-shadow(0 0 22px color-mix(in srgb, var(--glow) 70%, transparent));
+}
+
+/* coloured light falling on the mascot from above */
+#lightBuddy .tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--glow) 0%, color-mix(in srgb, var(--glow) 40%, transparent) 60%, transparent 95%);
+  -webkit-mask: url(icons/mascot.png) center / contain no-repeat;
+  mask: url(icons/mascot.png) center / contain no-repeat;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
+#lightView.on #lightBuddy .tint {
+  opacity: 1;
+}
+
+#lightBuddy.talking img {
+  animation: chatter 0.45s ease-in-out infinite alternate;
+}
+
+/* light comes on: a little happy jump */
+#lightBuddy.wake img {
+  animation: wake 0.6s ease;
+}
+
+@keyframes wake {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-18px) scale(1.08, 0.95); }
+  70% { transform: translateY(0) scale(0.96, 1.04); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+#lightView.party #lightBuddy img {
+  animation: dance 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes dance {
+  from { transform: translateY(0) rotate(-8deg); }
+  to { transform: translateY(-12px) rotate(8deg); }
+}
+
+/* sleeping in the dark: z z Z */
+.zzz {
+  position: absolute;
+  right: 8%;
+  top: -10%;
+  font-size: 22px;
+  font-weight: 800;
+  color: #c9b8ff;
+  opacity: 1;
+  transition: opacity 0.4s;
+}
+
+.zzz i {
+  position: absolute;
+  font-style: normal;
+  opacity: 0;
+  animation: snooze 3s ease-in infinite;
+}
+
+.zzz i:nth-child(2) { animation-delay: 1s; font-size: 26px; }
+.zzz i:nth-child(3) { animation-delay: 2s; font-size: 32px; }
+
+@keyframes snooze {
+  0% { transform: translate(0, 0); opacity: 0; }
+  20% { opacity: 0.9; }
+  100% { transform: translate(26px, -50px); opacity: 0; }
+}
+
+#lightView.on .zzz {
+  opacity: 0;
 }
 
 /* ---------- Picture card ---------- */

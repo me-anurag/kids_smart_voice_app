@@ -12,6 +12,7 @@ const kidGrid = $("kidGrid");
 const homeTitle = $("homeTitle");
 const modeTitle = $("modeTitle");
 const bulbWrap = $("bulbWrap");
+const lightBuddy = $("lightBuddy");
 const lightView = $("lightView");
 const pictureView = $("pictureView");
 const animalView = $("animalView");
@@ -121,6 +122,7 @@ let currentVoice = null;
 function setTalking(on) {
   buddy.classList.toggle("talking", on);
   welcomeBuddy.classList.toggle("talking", on);
+  lightBuddy.classList.toggle("talking", on);
 }
 
 function wiggleBuddy() {
@@ -315,8 +317,17 @@ const ON_COLOR = "#ffe066";
 const OFF_COLOR = "#555555";
 
 function setLight(color, saveIt = true) {
-  bulbWrap.style.setProperty("--glow", color);
-  bulbWrap.classList.toggle("on", color != OFF_COLOR);
+  let on = color != OFF_COLOR;
+  let wasOn = lightView.classList.contains("on");
+  lightView.style.setProperty("--glow", color);
+  lightView.classList.toggle("on", on);
+  bulbWrap.classList.toggle("on", on);
+  // the mascot wakes up with a little jump when the light comes on
+  if (on && !wasOn) {
+    lightBuddy.classList.remove("wake");
+    void lightBuddy.offsetWidth;
+    lightBuddy.classList.add("wake");
+  }
   bulbWrap.classList.remove("pop");
   void bulbWrap.offsetWidth; // restart animation
   bulbWrap.classList.add("pop");
@@ -329,6 +340,7 @@ function stopParty() {
   clearInterval(disco);
   disco = null;
   bulbWrap.classList.remove("party");
+  lightView.classList.remove("party");
   music.pause();
   sound.hidden = true;
 }
@@ -336,6 +348,7 @@ function stopParty() {
 function startParty() {
   let list = Object.values(colors).map((c) => c.color);
   bulbWrap.classList.add("party");
+  lightView.classList.add("party");
   disco = setInterval(function () {
     let pick = list[Math.floor(Math.random() * list.length)];
     setLight(pick, false);
