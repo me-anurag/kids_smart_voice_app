@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="talk/talk.css">
 <link rel="stylesheet" href="quiz/quiz.css">
+<link rel="stylesheet" href="ajooba/ajooba.css">
 </head>
 
 <body class="mode-welcome">
@@ -58,9 +59,13 @@
       <span class="tileEmoji">💬</span>
       <span class="tileName">Talk</span>
     </button>
-    <button class="homeTile wide" data-mode="quiz">
+    <button class="homeTile" data-mode="quiz">
       <span class="tileEmoji">🏆</span>
       <span class="tileName">Quiz</span>
+    </button>
+    <button class="homeTile" data-mode="ajooba">
+      <span class="tileEmoji"><img src="icons/gappu-small.png" alt=""></span>
+      <span class="tileName">Ajooba</span>
     </button>
   </div>
   <button id="changeName">🔄 Change</button>
@@ -189,6 +194,37 @@
     <div id="qConfetti"></div>
   </section>
 
+  <!-- Ajooba: Gappu's surprising facts (ajooba/ajooba.js) -->
+  <section id="ajoobaView" class="view" hidden>
+    <div id="ajBox">
+      <div id="ajTop">
+        <span id="ajToday">🌟 आज: 0 / 5</span>
+        <button id="ajSavedBtn">⭐ मेरे अजूबे <b id="ajSavedCount">0</b></button>
+      </div>
+      <div id="ajCard" class="loading">
+        <img id="ajPhotoBg" alt="">
+        <img id="ajPhoto" alt="">
+        <div id="ajEmojiArt"><span id="ajEmoji"></span></div>
+        <div id="ajLoader"><span>🔍</span></div>
+        <span id="ajTopic"></span>
+      </div>
+      <div id="ajTalkRow">
+        <img id="ajGappu" class="talker" src="icons/gappu.png" alt="Gappu">
+        <p id="ajFact"></p>
+      </div>
+      <div id="ajReact">
+        <button data-r="wow">😲 वाह!</button>
+        <button data-r="haha">😂 हाहा!</button>
+        <button data-r="save">⭐ सेव</button>
+      </div>
+      <button id="ajNext">🎲 अगला अजूबा!</button>
+    </div>
+    <div id="ajSaved" hidden>
+      <div id="ajSavedHead"><b>⭐ मेरे अजूबे</b><button id="ajSavedClose" aria-label="Close">✖</button></div>
+      <div id="ajSavedList"></div>
+    </div>
+  </section>
+
   <!-- Pictures mode -->
   <section id="pictureView" class="view" hidden>
     <div id="card">
@@ -261,5 +297,7 @@
 <script src="talk/talk.js"></script>
 <script src="quiz/quiz-data.js"></script>
 <script src="quiz/quiz.js"></script>
+<script src="ajooba/ajooba-data.js"></script>
+<script src="ajooba/ajooba.js"></script>
 </body>
 </html>

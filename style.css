@@ -1105,7 +1105,7 @@ body.mode-home #bottom {
 }
 
 #homeMascot {
-  width: min(56vw, 25vh);
+  width: min(48vw, 19vh);
   margin-top: 1vh;
   animation: bob 2.4s ease-in-out infinite;
 }
@@ -1121,7 +1121,7 @@ body.mode-home #bottom {
 }
 
 #homeSub {
-  margin: 6px 0 16px;
+  margin: 4px 0 12px;
   font-size: 21px;
   font-weight: 700;
   text-shadow: 0 2px 0 #6a00b8;
@@ -1132,7 +1132,7 @@ body.mode-home #bottom {
   max-width: 420px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
 }
 
 .homeTile {
@@ -1140,8 +1140,8 @@ body.mode-home #bottom {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 8px;
+  gap: 4px;
+  padding: 8px 6px;
   border-radius: 28px;
   color: #fff;
   font-size: 23px;
@@ -1156,6 +1156,19 @@ body.mode-home #bottom {
 .homeTile:nth-child(3) { animation-delay: 0.16s; }
 .homeTile:nth-child(4) { animation-delay: 0.24s; }
 .homeTile:nth-child(5) { animation-delay: 0.32s; }
+.homeTile:nth-child(6) { animation-delay: 0.4s; }
+
+.homeTile[data-mode="ajooba"] {
+  background: radial-gradient(circle at 25% 20%, #a8f0ff, #22b8d6 50%, #2e6fe0);
+  box-shadow: 0 7px 0 #1a4aa8, 0 12px 22px rgba(60, 0, 90, 0.3);
+  text-shadow: 0 2px 0 #1a4aa8;
+}
+
+.homeTile .tileEmoji img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
 
 /* the Quiz tile is wide, under the other four */
 .homeTile.wide {
@@ -1205,8 +1218,8 @@ body.mode-home #bottom {
 }
 
 .tileEmoji {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.35);

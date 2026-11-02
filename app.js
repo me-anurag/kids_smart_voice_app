@@ -138,7 +138,7 @@ function speak(words, onSentence) {
       let chosen = hindi ? hindiVoice : englishVoice;
       if (chosen) voice.voice = chosen;
       voice.rate = 0.9;
-      voice.pitch = 1.15;
+      voice.pitch = mode == "ajooba" ? 1.5 : 1.15; // Gappu the baby elephant has a higher, cuter voice
       let began = false;
       let i = index;
       voice.onstart = () => {
@@ -284,7 +284,7 @@ const MODES = {
 
 // Pictures talks in Hindi, everything else in English
 function hindiMode() {
-  return mode == "picture" || mode == "welcome" || mode == "talk";
+  return mode == "picture" || mode == "welcome" || mode == "talk" || mode == "ajooba";
 }
 
 function tr(hindi, english) {
@@ -1193,6 +1193,7 @@ function think(heard, otherGuesses = []) {
   else if (mode == "picture") showPicture(heard, otherGuesses);
   else if (mode == "animals") animalCommand(heard);
   else if (mode == "quiz") quizHeard(heard, otherGuesses);
+  else if (mode == "ajooba") ajoobaHeard(heard);
   else lightCommand(heard);
 }
 

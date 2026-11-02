@@ -1,0 +1,368 @@
+/* ---------- Ajooba: Gappu's surprising facts ---------- */
+
+body.mode-ajooba {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.2), transparent 60%),
+    linear-gradient(160deg, #00a8a8 0%, #2e6fe0 50%, #7b2ff7 100%);
+}
+
+/* Ajooba has its own buttons */
+body.mode-ajooba #talkRow,
+body.mode-ajooba #hints,
+body.mode-ajooba #bottom {
+  display: none;
+}
+
+#ajoobaView {
+  position: relative;
+  align-items: stretch;
+}
+
+#ajBox {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+}
+
+/* ---------- top: today's count and saved facts ---------- */
+
+#ajTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+#ajToday,
+#ajSavedBtn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+#ajToday {
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+#ajSavedBtn {
+  background: #ffd60a;
+  color: #6a2a00;
+  box-shadow: 0 4px 0 #c99500;
+}
+
+#ajSavedBtn b {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+/* ---------- the picture card ---------- */
+
+#ajCard {
+  position: relative;
+  flex: 1;
+  min-height: 150px;
+  max-height: 36vh;
+  border-radius: 26px;
+  border: 5px solid #fff;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, #fff6c9, #ffb44a 60%, #ff7a1a);
+  box-shadow: 0 8px 0 rgba(20, 30, 90, 0.35);
+}
+
+/* the whole photo is shown; a blurred copy fills the space around it */
+#ajPhoto,
+#ajPhotoBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+#ajPhoto {
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+#ajPhotoBg {
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  filter: blur(18px) saturate(1.3);
+}
+
+#ajCard.photo #ajPhoto,
+#ajCard.photo #ajPhotoBg {
+  display: block;
+}
+
+#ajEmojiArt {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#ajCard.emoji #ajEmojiArt {
+  display: flex;
+}
+
+#ajEmoji {
+  font-size: min(28vw, 16vh);
+  filter: drop-shadow(0 6px 0 rgba(120, 50, 0, 0.25));
+}
+
+#ajLoader {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 54px;
+  background: linear-gradient(110deg, #1d5fb8 30%, #3b86e8 50%, #1d5fb8 70%);
+  background-size: 250% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+#ajLoader span {
+  animation: hop 0.6s ease-in-out infinite alternate;
+}
+
+#ajCard.loading #ajLoader {
+  display: flex;
+}
+
+#ajCard.pop {
+  animation: bounceIn 0.6s ease;
+}
+
+#ajCard.photo #ajPhoto {
+  animation: kenburns 10s ease-in-out infinite alternate;
+}
+
+#ajTopic {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d3f8f;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+}
+
+.ajSpark {
+  position: absolute;
+  bottom: 10%;
+  z-index: 3;
+  font-size: 26px;
+  pointer-events: none;
+  animation: sparkUp 1.6s ease-out forwards;
+}
+
+@keyframes sparkUp {
+  0% { transform: translateY(0) scale(0.4); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-160px) scale(1.2) rotate(30deg); opacity: 0; }
+}
+
+/* ---------- Gappu and the fact ---------- */
+
+#ajTalkRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#ajGappu {
+  width: min(34vw, 18vh);
+  margin-left: -6px;
+  flex-shrink: 0;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 5px 0 rgba(20, 30, 90, 0.3));
+  animation: bob 2.4s ease-in-out infinite;
+}
+
+#ajGappu.talking {
+  animation: chatter 0.4s ease-in-out infinite alternate;
+}
+
+#ajGappu.excited {
+  animation: hopHop 0.45s ease-in-out 3 alternate;
+}
+
+#ajGappu.wow {
+  animation: gappuWow 0.8s ease;
+}
+
+#ajGappu.giggle {
+  animation: gappuGiggle 0.18s ease-in-out 8 alternate;
+}
+
+@keyframes gappuWow {
+  0%, 100% { transform: scale(1) translateY(0); }
+  35% { transform: scale(1.18) translateY(-20px) rotate(-6deg); }
+  65% { transform: scale(0.95) translateY(0) rotate(4deg); }
+}
+
+@keyframes gappuGiggle {
+  from { transform: rotate(-6deg) translateY(0); }
+  to { transform: rotate(6deg) translateY(-6px); }
+}
+
+#ajFact {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 10px;
+  padding: 12px 16px;
+  max-height: 24vh;
+  overflow-y: auto;
+  border-radius: 22px 22px 22px 6px;
+  background: #fff;
+  color: #1d2f6f;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+  box-shadow: 0 5px 0 rgba(20, 30, 90, 0.3);
+  scrollbar-width: none;
+}
+
+/* ---------- reactions and next ---------- */
+
+#ajReact {
+  display: flex;
+  gap: 8px;
+}
+
+#ajReact button {
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: 18px;
+  background: #fff;
+  color: #1d2f6f;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 rgba(20, 30, 90, 0.3);
+  white-space: nowrap;
+  transition: transform 0.1s;
+}
+
+#ajReact button:active {
+  transform: translateY(4px);
+}
+
+#ajReact.ready button {
+  animation: pop 1.4s ease-in-out infinite;
+}
+
+#ajReact.ready button:nth-child(2) { animation-delay: 0.2s; }
+#ajReact.ready button:nth-child(3) { animation-delay: 0.4s; }
+
+#ajReact button.done {
+  background: #ffd60a;
+  color: #6a2a00;
+}
+
+#ajNext {
+  padding: 14px;
+  border-radius: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  background: radial-gradient(circle at 30% 20%, #fff3a0, #ffb800 50%, #ff6a00);
+  box-shadow: 0 7px 0 #b34700, 0 12px 22px rgba(20, 30, 90, 0.3);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+  text-shadow: 0 2px 0 #b34700;
+  transition: transform 0.1s;
+}
+
+#ajNext:active {
+  transform: translateY(5px);
+}
+
+/* ---------- my saved facts ---------- */
+
+#ajSaved {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #fff8d6, #ffe3f4);
+  color: #1d2f6f;
+  box-shadow: 0 10px 30px rgba(20, 30, 90, 0.4);
+  animation: bounceIn 0.4s ease;
+}
+
+#ajSaved[hidden] {
+  display: none;
+}
+
+#ajSavedHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 22px;
+}
+
+#ajSavedClose {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ff4f6d;
+  color: #fff;
+  font-size: 18px;
+}
+
+#ajSavedList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ajSavedItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1d2f6f;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.4;
+  box-shadow: 0 3px 0 rgba(20, 30, 90, 0.15);
+}
+
+.ajSavedEmoji {
+  font-size: 30px;
+  flex-shrink: 0;
+}
+
+.ajEmpty {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
