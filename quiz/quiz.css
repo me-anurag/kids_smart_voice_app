@@ -146,7 +146,7 @@ body.mode-quiz .micIcon {
   left: 18px;
   bottom: 14px;
   z-index: 1;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
@@ -532,4 +532,172 @@ body.mode-quiz .micIcon {
 @keyframes fall {
   0% { transform: translate(0, 0) rotate(0); opacity: 1; }
   100% { transform: translate(var(--drift), 105vh) rotate(var(--spin)); opacity: 0.9; }
+}
+
+/* ---------- Animal Sounds card in the menu (no photo: big animal emojis) ---------- */
+
+.qCatEmojis {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  font-size: 32px;
+  white-space: nowrap;
+  background: radial-gradient(circle at 30% 20%, #b6f7a0, #3ed16f 50%, #0a9f6a);
+  animation: none !important;
+}
+
+/* ---------- loading a picture: a shimmering card instead of a blank one ---------- */
+
+#qLoader {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 54px;
+  background: linear-gradient(110deg, #3a1670 30%, #5d2aa8 50%, #3a1670 70%);
+  background-size: 250% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+#qLoader span {
+  animation: hopHop 0.5s ease-in-out infinite alternate;
+}
+
+#qCard.loading #qLoader {
+  display: flex;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* ---------- sound card: big speaker, then the animal ---------- */
+
+#qSoundArt {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at 50% 40%, #fff6c9, #ffb44a 60%, #ff7a1a);
+  cursor: pointer;
+}
+
+#qCard.sound #qSoundArt {
+  display: flex;
+}
+
+#qCard.sound #qPhoto {
+  display: none;
+}
+
+#qSoundEmoji {
+  font-size: min(26vw, 15vh);
+  line-height: 1;
+  filter: drop-shadow(0 6px 0 rgba(120, 50, 0, 0.25));
+}
+
+#qSoundEmoji.dark {
+  filter: brightness(0.25) drop-shadow(0 6px 0 rgba(120, 50, 0, 0.25));
+}
+
+#qCard.playing #qSoundEmoji {
+  animation: gasp 0.35s ease-in-out infinite alternate;
+}
+
+#qCard.right #qSoundEmoji {
+  animation: wake 0.7s ease;
+}
+
+#qTapAgain {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: #8a3a00;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+#qCard.right #qTapAgain,
+#qCard.noPhoto #qTapAgain,
+#qCard.right #qMystery {
+  display: none;
+}
+
+/* ---------- Bolo asks the question ---------- */
+
+#qAskRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#qBuddy {
+  width: 58px;
+  flex-shrink: 0;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 4px 0 rgba(60, 0, 90, 0.3));
+}
+
+#qBuddy.talking {
+  animation: chatter 0.45s ease-in-out infinite alternate;
+}
+
+#qBuddy.cheer {
+  animation: cheer 0.7s ease 2;
+}
+
+#qBuddy.oops {
+  animation: oops 0.8s ease;
+}
+
+@keyframes cheer {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  40% { transform: translateY(-22px) rotate(-10deg) scale(1.1); }
+  70% { transform: translateY(0) rotate(8deg); }
+}
+
+@keyframes oops {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-14deg) translateY(4px); }
+  60% { transform: rotate(10deg); }
+}
+
+#qAskRow #qAsk {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  border-radius: 18px 18px 18px 4px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 19px;
+  text-align: left;
+  text-shadow: none;
+  box-shadow: 0 4px 0 rgba(60, 0, 90, 0.3);
+}
+
+#qRepeat {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+}
+
+/* the answer Bolo is reading right now lights up */
+.qOption.reading {
+  --c: #fff3a0;
+  transform: scale(1.04);
+  box-shadow: 0 0 0 4px #ffd60a, 0 5px 0 rgba(60, 0, 90, 0.3);
+}
+
+.qOption.dark .qOptEmoji {
+  filter: brightness(0.25);
 }

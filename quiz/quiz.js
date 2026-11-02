@@ -1,5 +1,6 @@
-// ---------- Quiz: guess the sport / monument from a photo ----------
-// Answer by voice (English or Hindi) or by tapping. Scores are saved for each kid on this phone.
+// ---------- Quiz: guess the sport / monument from a photo, or the animal from its sound ----------
+// Bolo reads the question and the answers aloud (each answer lights up as he reads it),
+// the kid answers by voice (English or Hindi) or by tapping. Scores are saved for each kid on this phone.
 
 (function () {
   const ROUND = 10; // questions per round
@@ -9,7 +10,8 @@
     { stars: 25, name: "Gold", badge: "🥇" },
     { stars: 50, name: "Champion", badge: "🏆" },
   ];
-  const PRAISE = ["Shabash", "Wow, super", "Amazing", "Yay, you got it", "Brilliant", "Kamaal kar diya"];
+  const PRAISE = ["Shabash", "Wow, super", "Amazing", "Yay, you got it", "Brilliant", "Kamaal kar diya", "Well done"];
+  const OOPS = ["Oops! Try again.", "Almost! Try once more.", "Not this one! Try again."];
 
   const $ = (id) => document.getElementById(id);
   const view = $("quizView");
@@ -18,6 +20,8 @@
   const qResult = $("qResult");
   const qPhoto = $("qPhoto");
   const qCard = $("qCard");
+  const qSoundEmoji = $("qSoundEmoji");
+  const qBuddy = $("qBuddy");
   const qAsk = $("qAsk");
   const qOptions = $("qOptions");
   const qFeedback = $("qFeedback");
@@ -26,7 +30,7 @@
   const qDots = $("qDots");
   const qNext = $("qNext");
 
-  let cat = null; // "sports" or "monuments"
+  let cat = null; // "sports", "monuments" or "animals"
   let questions = [];
   let index = 0;
   let score = 0;
@@ -36,6 +40,7 @@
   let answered = false;
   let active = false;
   let nextTimer = null;
+  let askId = 0;
 
   // ---------- saved progress for each kid ----------
 
@@ -74,6 +79,10 @@
     return { now, next, pct };
   }
 
+  function randomOf(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
   // ---------- little sounds ----------
 
   let synth = null;
@@ -81,6 +90,7 @@
   function notes(list, type = "triangle", gap = 0.09, volume = 0.15) {
     try {
       synth = synth || new (window.AudioContext || window.webkitAudioContext)();
+      synth.resume().catch(() => {});
       let t = synth.currentTime;
       list.forEach((freq, i) => {
         let osc = synth.createOscillator();
@@ -138,17 +148,87 @@
     el.classList.add("bump");
   }
 
+  // Bolo's face on the quiz screen: "cheer" jumps for joy, "oops" tilts sadly
+  function buddyMood(mood) {
+    qBuddy.classList.remove("cheer", "oops");
+    void qBuddy.offsetWidth;
+    if (mood) qBuddy.classList.add(mood);
+  }
+
   // ---------- speaking (English) ----------
 
-  function talk(text) {
-    return active ? speak(text) : Promise.resolve();
+  function talk(text, onSentence) {
+    return active ? speak(text, onSentence) : Promise.resolve();
+  }
+
+  // ---------- pictures: load before showing, retry, never leave a blank card ----------
+
+  const loaded = new Map(); // url -> Promise<boolean>
+
+  function loadImage(url) {
+    if (!loaded.has(url)) {
+      let attempt = (n) =>
+        new Promise((done) => {
+          let img = new Image();
+          img.onload = () => done(true);
+          img.onerror = () => done(false);
+          img.src = n ? url + "?retry=" + n : url;
+        }).then((ok) => ok || (n < 1 ? new Promise((r) => setTimeout(r, 700)).then(() => attempt(n + 1)) : false));
+      loaded.set(url, attempt(0).then((ok) => {
+        if (!ok) loaded.delete(url); // try again next time
+        return ok;
+      }));
+    }
+    return loaded.get(url);
+  }
+
+  function imageUrl(item) {
+    return "quiz/img/" + cat + "/" + item.key + ".jpg";
+  }
+
+  // ---------- animal sounds ----------
+
+  const quizAudio = new Audio();
+  let soundPlays = 0;
+
+  function playSound(item) {
+    soundPlays = 0;
+    quizAudio.onended = () => {
+      // very short sounds (pig, elephant) play twice so kids don't miss them
+      if (quizAudio.duration < 1.6 && ++soundPlays < 2) {
+        quizAudio.currentTime = 0;
+        quizAudio.play().catch(() => {});
+      } else {
+        qCard.classList.remove("playing");
+      }
+    };
+    return new Promise((done) => {
+      quizAudio.src = item.sound;
+      quizAudio.currentTime = 0;
+      qCard.classList.add("playing");
+      let finish = () => {
+        quizAudio.removeEventListener("ended", finish);
+        done();
+      };
+      quizAudio.addEventListener("ended", finish);
+      setTimeout(finish, 8000);
+      quizAudio.play().catch(finish);
+    }).then(() => new Promise((r) => setTimeout(r, quizAudio.duration < 1.6 ? 1500 : 300)));
+  }
+
+  function stopSound() {
+    quizAudio.onended = null;
+    quizAudio.pause();
+    qCard.classList.remove("playing");
   }
 
   // ---------- menu ----------
 
   function showMenu() {
     cat = null;
+    askId++;
     clearTimeout(nextTimer);
+    stopSound();
     qMenu.hidden = false;
     qGame.hidden = true;
     qResult.hidden = true;
@@ -162,12 +242,13 @@
       let best = p.best[card.dataset.cat];
       card.querySelector(".qBest").innerText = best ? "Best: " + best + " 🏅" : "New! ✨";
     }
-    bubble.innerText = "Pick a quiz! ⚽ or 🏛️";
-    talk("Hi " + who().name + "! Pick a quiz. Sports, or monuments?");
+    bubble.innerText = "Pick a quiz!";
+    talk("Hi " + who().name + "! Pick a quiz. Sports, monuments, or animal sounds?");
   }
 
   for (let card of document.querySelectorAll(".qCat")) {
-    card.querySelector(".qCatImg").style.backgroundImage = "url(quiz/img/" + card.dataset.cat + "/" + QUIZ[card.dataset.cat].cover + ".jpg)";
+    let quiz = QUIZ[card.dataset.cat];
+    if (quiz.cover) card.querySelector(".qCatImg").style.backgroundImage = "url(quiz/img/" + card.dataset.cat + "/" + quiz.cover + ".jpg)";
     card.onclick = () => {
       buzz();
       start(card.dataset.cat);
@@ -198,6 +279,8 @@
     qScore.innerText = "🪙 0";
     qStreak.hidden = true;
     qDots.innerHTML = questions.map(() => "<i></i>").join("");
+    // get this round's pictures ready in the background, so they appear instantly
+    if (QUIZ[cat].type != "sound") questions.forEach((item) => loadImage(imageUrl(item)));
     ask();
   }
 
@@ -205,30 +288,27 @@
     return questions[index];
   }
 
-  function ask() {
+  async function ask() {
     clearTimeout(nextTimer);
+    stopSound();
+    let id = ++askId;
     let item = current();
+    let quiz = QUIZ[cat];
     tries = 0;
     answered = false;
     qNext.hidden = true;
     qFeedback.className = "";
     qFeedback.innerText = "";
+    buddyMood(null);
     [...qDots.children].forEach((d, i) => (d.className = i < index ? d.className : i == index ? "now" : ""));
 
-    // the photo starts blurry and slowly becomes clear
-    qCard.className = "";
-    qPhoto.classList.remove("reveal");
-    qPhoto.src = "quiz/img/" + cat + "/" + item.key + ".jpg";
-    void qPhoto.offsetWidth;
-    qPhoto.classList.add("reveal");
-    qCard.classList.add("enter");
-
-    qAsk.innerText = QUIZ[cat].question;
-    let others = shuffle(QUIZ[cat].items.filter((x) => x.key != item.key)).slice(0, 2);
+    // the answer buttons
+    let others = shuffle(quiz.items.filter((x) => x.key != item.key)).slice(0, 2);
+    let options = shuffle([item, ...others]);
     qOptions.innerHTML = "";
-    for (let option of shuffle([item, ...others])) {
+    for (let option of options) {
       let b = document.createElement("button");
-      b.className = "qOption";
+      b.className = "qOption" + (option.dark ? " dark" : "");
       b.dataset.key = option.key;
       b.innerHTML = '<span class="qOptEmoji"></span><span></span>';
       b.firstChild.innerText = option.emoji;
@@ -239,15 +319,81 @@
       };
       qOptions.appendChild(b);
     }
-    bubble.innerText = QUIZ[cat].question + " 🤔";
-    talk(QUIZ[cat].question);
+    qAsk.innerText = quiz.question;
+
+    // the card: a photo (only shown once it has really loaded), or a speaker for sounds
+    qCard.className = "enter";
+    qPhoto.classList.remove("reveal");
+    if (quiz.type == "sound") {
+      qCard.classList.add("sound");
+      qSoundEmoji.innerText = "🔊";
+      qSoundEmoji.classList.remove("dark");
+    } else {
+      qCard.classList.add("loading");
+      qPhoto.removeAttribute("src");
+      let ok = await loadImage(imageUrl(item));
+      if (id != askId) return;
+      qCard.classList.remove("loading");
+      if (ok) {
+        qPhoto.src = imageUrl(item);
+        void qPhoto.offsetWidth;
+        qPhoto.classList.add("reveal");
+      } else {
+        // the picture could not load: show the big emoji instead, the question still works
+        qCard.classList.add("sound", "noPhoto");
+        qSoundEmoji.innerText = item.emoji;
+      }
+    }
+
+    // Bolo reads the question and every answer; each answer lights up while he reads it
+    let first = index == 0 ? "Let's play, " + who().name + "! " : "";
+    let names = options.map((o) => o.name);
+    let reading = first + quiz.question + " " + names.slice(0, -1).join("? ") + "? Or " + names[names.length - 1] + "?";
+    let lead = first ? 2 : 1; // sentences before the first answer
+    let light = (i) => [...qOptions.children].forEach((b, n) => b.classList.toggle("reading", n == i - lead));
+    if (quiz.type == "sound") {
+      await talk(first + "Listen carefully!");
+      if (id != askId) return;
+      await playSound(item);
+      if (id != askId) return;
+      reading = quiz.question + " " + names.slice(0, -1).join("? ") + "? Or " + names[names.length - 1] + "?";
+      lead = 1;
+    }
+    await talk(reading, light);
+    light(-1);
   }
+
+  // tap the card: hear the sound again (sound quiz), or bounce the photo
+  qCard.onclick = () => {
+    if (!active || cat == null) return;
+    if (QUIZ[cat].type == "sound" && !answered) {
+      hush();
+      playSound(current());
+    }
+  };
+
+  $("qRepeat").onclick = () => {
+    buzz();
+    if (cat == null || answered) return;
+    hush();
+    let item = current();
+    let names = [...qOptions.querySelectorAll(".qOption:not(.wrong)")].map((b) => b.lastChild.innerText);
+    let light = (i) => [...qOptions.children].forEach((b) => b.classList.toggle("reading", b.lastChild.innerText == names[i - 1]));
+    let read = () => talk(QUIZ[cat].question + " " + names.slice(0, -1).join("? ") + (names.length > 1 ? "? Or " : "") + names[names.length - 1] + "?", light).then(() => light(-1));
+    if (QUIZ[cat].type == "sound") playSound(item).then(read);
+    else read();
+  };
 
   async function answer(option, button) {
     if (answered || !active) return;
     let item = current();
     button = button || qOptions.querySelector('[data-key="' + option.key + '"]');
+    if (button && button.classList.contains("wrong")) return;
     tries++;
+    let id = ++askId; // stops the reading of the answers
+    hush();
+    stopSound();
+    [...qOptions.children].forEach((b) => b.classList.remove("reading"));
 
     if (option.key == item.key) {
       answered = true;
@@ -259,23 +405,29 @@
       qScore.innerText = "🪙 " + score;
       bump(qScore);
       if (button) button.classList.add("right");
-      qCard.className = "right";
+      qCard.classList.remove("wrong", "enter");
+      qCard.classList.add("right");
+      if (QUIZ[cat].type == "sound") {
+        qSoundEmoji.innerText = item.emoji; // the animal appears
+        qSoundEmoji.classList.toggle("dark", !!item.dark);
+      }
       qDots.children[index].className = tries == 1 ? "right" : "half";
       flyPoints("+" + (points + bonus));
       confetti();
       sounds.right();
+      buddyMood("cheer");
       if (streak >= 3) {
         qStreak.hidden = false;
         qStreak.innerText = "🔥 " + streak;
         bump(qStreak);
         if (bonus) setTimeout(sounds.streak, 400);
       }
-      let praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+      let praise = randomOf(PRAISE);
       qFeedback.className = "good";
       qFeedback.innerText = "✅ " + item.name + "! " + item.fact;
-      bubble.innerText = praise + "! 🎉";
-      await talk(praise + " " + who().name + "! It's " + item.name + "! " + item.fact);
-      if (active && answered && current() == item) showNext();
+      let streakLine = bonus ? " " + streak + " in a row! You are on fire!" : "";
+      await talk(praise + ", " + who().name + "! It's " + item.name + "!" + streakLine + " " + item.fact);
+      if (active && id == askId) showNext();
       return;
     }
 
@@ -286,28 +438,35 @@
       button.classList.add("wrong");
       button.disabled = true;
     }
-    qCard.className = "wrong";
+    qCard.classList.remove("right", "wrong", "enter");
+    void qCard.offsetWidth;
+    qCard.classList.add("wrong");
     sounds.wrong();
+    buddyMood("oops");
     if (tries == 1) {
       qFeedback.className = "hint";
       qFeedback.innerText = "💡 " + item.hint;
-      await talk("Oops! Here's a hint. " + item.hint);
+      await talk(randomOf(OOPS) + " Here's a hint. " + item.hint);
     } else {
       answered = true;
       qDots.children[index].className = "miss";
       let rightButton = qOptions.querySelector('[data-key="' + item.key + '"]');
       if (rightButton) rightButton.classList.add("right");
+      if (QUIZ[cat].type == "sound") {
+        qSoundEmoji.innerText = item.emoji;
+        qSoundEmoji.classList.toggle("dark", !!item.dark);
+      }
       qFeedback.className = "good";
       qFeedback.innerText = "👉 It's " + item.name + "! " + item.fact;
       await talk("It's " + item.name + "! Let's remember it. " + item.fact);
-      if (active && current() == item) showNext();
+      if (active && id == askId) showNext();
     }
   }
 
   function showNext() {
     qNext.hidden = false;
     qNext.innerText = index + 1 < questions.length ? "Next ▶" : "See my score 🏆";
-    nextTimer = setTimeout(next, 2500);
+    nextTimer = setTimeout(next, 3000);
   }
 
   function next() {
@@ -327,6 +486,8 @@
   // ---------- end of round ----------
 
   async function finish() {
+    askId++;
+    stopSound();
     let p = progress();
     let stars = rightCount >= 9 ? 3 : rightCount >= 6 ? 2 : 1;
     let before = levelOf(p.stars);
@@ -369,13 +530,13 @@
     sounds.win();
     confetti(record ? 140 : 90);
     let line = rightCount + " right! You won " + stars + (stars == 1 ? " star" : " stars") + "!";
-    if (record) line += " New record!";
+    if (record) line += " That's a new record!";
     if (after.name != before.name) {
       line += " And you are now " + after.name + "!";
       setTimeout(() => confetti(120), 1200);
     }
     bubble.innerText = "🏆 " + line;
-    await talk("Great job " + who().name + "! " + line);
+    await talk("Great job " + who().name + "! " + line + " Do you want to play again?");
   }
 
   $("qAgain").onclick = () => {
@@ -418,12 +579,13 @@
     if (!cat) {
       // in the menu
       let all = texts.join(" ").toLowerCase();
+      if (/animal|sound|जानवर|janwar|आवाज़|आवाज|awaaz|awaz/.test(all)) return start("animals");
       if (/sport|खेल|khel|स्पोर्ट/.test(all)) return start("sports");
       if (/monument|स्मारक|smarak|मॉन्यूमेंट|building/.test(all)) return start("monuments");
-      return talk("Say sports, or monuments!");
+      return talk("Say sports, monuments, or animal sounds!");
     }
     if (!qResult.hidden) {
-      if (/again|फिर|phir|dobara|दोबारा|play/.test(texts.join(" ").toLowerCase())) return start(cat);
+      if (/again|yes|फिर|phir|dobara|दोबारा|play|हाँ|haan/.test(texts.join(" ").toLowerCase())) return start(cat);
       return;
     }
     if (answered) return next();
@@ -438,7 +600,7 @@
     view,
     title: "Quiz",
     hints: [],
-    hello: "Pick a quiz! ⚽ or 🏛️",
+    hello: "Pick a quiz!",
     enter() {
       active = true;
       showMenu();
@@ -446,7 +608,9 @@
     leave() {
       active = false;
       cat = null;
+      askId++;
       clearTimeout(nextTimer);
+      stopSound();
     },
   };
 

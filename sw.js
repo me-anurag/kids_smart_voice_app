@@ -3,6 +3,7 @@ importScripts("version.js");
 
 const CACHE = "bolobolo-" + APP_VERSION + "-" + BUILD;
 const FONT_CACHE = "bolobolo-fonts";
+const MEDIA_CACHE = "bolobolo-media"; // photos, sounds, icons: they never change, kept across updates
 
 const FILES = [
   "./",
@@ -60,7 +61,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k != CACHE && k != FONT_CACHE).map((k) => caches.delete(k))
+        keys.filter((k) => k != CACHE && k != FONT_CACHE && k != MEDIA_CACHE).map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );
@@ -70,6 +71,24 @@ self.addEventListener("fetch", (event) => {
   let request = event.request;
   if (request.method != "GET") return;
   let url = new URL(request.url);
+
+  // Photos, sounds and icons: use the saved copy (instant, works on bad internet), else download and save
+  let media = /\/(quiz\/img|sounds|icons)\//.test(url.pathname);
+  if (url.origin == location.origin && media && !request.headers.has("range")) {
+    event.respondWith(
+      caches.open(MEDIA_CACHE).then((cache) =>
+        cache.match(request, { ignoreSearch: true }).then(
+          (saved) =>
+            saved ||
+            fetch(request).then((response) => {
+              if (response.ok && response.status == 200) cache.put(request, response.clone());
+              return response;
+            })
+        )
+      )
+    );
+    return;
+  }
 
   // App files: try the internet first (always newest), use saved copy when offline.
   if (url.origin == location.origin) {

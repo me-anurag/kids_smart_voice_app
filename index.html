@@ -153,12 +153,22 @@
         </div>
         <button class="qCat" data-cat="sports"><span class="qCatImg"></span><span class="qCatName">⚽ Sports</span><span class="qBest"></span></button>
         <button class="qCat" data-cat="monuments"><span class="qCatImg"></span><span class="qCatName">🏛️ Monuments</span><span class="qBest"></span></button>
+        <button class="qCat" data-cat="animals"><span class="qCatImg qCatEmojis">🦁🐘🐶🐱🦚</span><span class="qCatName">🐾 Animal Sounds</span><span class="qBest"></span></button>
       </div>
 
       <div id="qGame" hidden>
         <div id="qTop"><div id="qDots"></div><span id="qStreak" hidden></span><span id="qScore">🪙 0</span></div>
-        <div id="qCard"><img id="qPhoto" alt=""><span id="qMystery">?</span></div>
-        <p id="qAsk"></p>
+        <div id="qCard">
+          <img id="qPhoto" alt="">
+          <div id="qSoundArt"><span id="qSoundEmoji">🔊</span><span id="qTapAgain">👆 Tap to hear again</span></div>
+          <div id="qLoader"><span>🖼️</span></div>
+          <span id="qMystery">?</span>
+        </div>
+        <div id="qAskRow">
+          <img id="qBuddy" class="talker" src="icons/mascot.png" alt="">
+          <p id="qAsk"></p>
+          <button id="qRepeat" aria-label="Say it again">🔁</button>
+        </div>
         <div id="qOptions"></div>
         <p id="qFeedback"></p>
         <button id="qNext" hidden>Next ▶</button>

@@ -58,16 +58,21 @@ function save(key, value) {
 let hindiVoice = null;
 let englishVoice = null;
 
+// some Android phones write voice languages as "en_IN" instead of "en-IN"
+function voiceLang(v) {
+  return (v.lang || "").replace("_", "-").toLowerCase();
+}
+
 function findVoice() {
   let voices = speechSynthesis.getVoices();
   hindiVoice =
-    voices.find((v) => v.lang.startsWith("hi") && v.localService) ||
-    voices.find((v) => v.lang.startsWith("hi")) ||
+    voices.find((v) => voiceLang(v).startsWith("hi") && v.localService) ||
+    voices.find((v) => voiceLang(v).startsWith("hi")) ||
     null;
   englishVoice =
-    voices.find((v) => v.lang == "en-IN" && v.localService) ||
-    voices.find((v) => v.lang == "en-IN") ||
-    voices.find((v) => v.lang.startsWith("en") && v.localService) ||
+    voices.find((v) => voiceLang(v) == "en-in" && v.localService) ||
+    voices.find((v) => voiceLang(v) == "en-in") ||
+    voices.find((v) => voiceLang(v).startsWith("en") && v.localService) ||
     null;
 }
 
@@ -78,9 +83,10 @@ if ("speechSynthesis" in window) {
 
 // Speaks the words and returns a promise that resolves when Bolo has really finished.
 // Uses the speech events, not guessing: on Android speech can take a second to start.
+// onSentence(i) is called as each sentence starts (used to highlight quiz answers as they are read).
 let speechToken = 0;
 
-function speak(words) {
+function speak(words, onSentence) {
   let hindiNumbers = "०१२३४५६७८९";
   for (let i = 0; i < 10; i++) {
     words = words.replaceAll(hindiNumbers[i], i);
@@ -96,13 +102,17 @@ function speak(words) {
   // don't read emoji out loud
   let spoken = words.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "").trim();
   let token = ++speechToken;
-  speechSynthesis.cancel();
+  // on Android, cancel() finishes a moment later and can also swallow the next sentence:
+  // only cancel when something is playing, and then wait a bit longer before speaking
+  let wasBusy = speechSynthesis.speaking || speechSynthesis.pending;
+  if (wasBusy) speechSynthesis.cancel();
   if (!spoken) return Promise.resolve();
 
   // one sentence at a time: some phones cut long speech off in the middle
   let parts = spoken.split(/(?<=[।!?.])\s+/).map((p) => p.trim()).filter(Boolean);
   let hindi = hindiMode();
   let said = 0;
+  let index = 0;
 
   return new Promise((done) => {
     let finished = false;
@@ -119,32 +129,47 @@ function speak(words) {
       done();
     };
     // if the phone has no voice at all, nothing ever starts: don't wait forever
-    let startGuard = setTimeout(() => started || finish(), 4000);
-    let endGuard = setTimeout(finish, 6000 + spoken.length * 150);
+    let startGuard = setTimeout(() => started || finish(), 5000);
+    let endGuard = setTimeout(finish, 7000 + spoken.length * 150);
 
-    let next = () => {
-      if (token != speechToken || !parts.length) return finish();
-      let part = parts.shift();
+    let say = (part, retry) => {
       let voice = new SpeechSynthesisUtterance(part);
       voice.lang = hindi ? "hi-IN" : "en-IN";
       let chosen = hindi ? hindiVoice : englishVoice;
       if (chosen) voice.voice = chosen;
       voice.rate = 0.9;
       voice.pitch = 1.15;
+      let began = false;
+      let i = index;
       voice.onstart = () => {
-        started = true;
+        began = started = true;
         promptSpoken = true;
         setTalking(true);
+        if (onSentence) onSentence(i);
         bubble.scrollTop = (said / spoken.length) * (bubble.scrollHeight - bubble.clientHeight);
         said += part.length + 1;
       };
-      voice.onend = next;
-      voice.onerror = (e) => (e.error == "interrupted" || e.error == "canceled" ? finish() : next());
+      voice.onend = () => {
+        index++;
+        next();
+      };
+      voice.onerror = (e) => {
+        if (token != speechToken) return finish(); // we stopped it on purpose
+        let cut = e.error == "interrupted" || e.error == "canceled";
+        // swallowed before it began (Android cancel() race): try this sentence once more
+        if (cut && !began && !retry) return setTimeout(() => token == speechToken && say(part, true), 250);
+        index++;
+        cut ? finish() : next();
+      };
       currentVoice = voice;
       speechSynthesis.speak(voice);
     };
-    // Chrome sometimes drops speech started right after cancel(): wait a moment
-    setTimeout(next, 80);
+
+    let next = () => {
+      if (token != speechToken || !parts.length) return finish();
+      say(parts.shift(), false);
+    };
+    setTimeout(next, wasBusy ? 250 : 30);
     wiggleBuddy();
   });
 }
@@ -152,6 +177,7 @@ function speak(words) {
 let currentVoice = null;
 
 function setTalking(on) {
+  document.querySelectorAll(".talker").forEach((el) => el.classList.toggle("talking", on));
   buddy.classList.toggle("talking", on);
   welcomeBuddy.classList.toggle("talking", on);
   lightBuddy.classList.toggle("talking", on);

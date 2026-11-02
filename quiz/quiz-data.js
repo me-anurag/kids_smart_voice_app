@@ -105,3 +105,45 @@ const QUIZ = {
     ],
   },
 };
+
+// Animal sounds quiz: uses the 21 animals and recordings from Animal Sounds (sounds/<id>.mp3)
+const ANIMAL_FACTS = {
+  lion: ["The king of the jungle, with a big fluffy mane!", "A lion's roar can be heard 8 kilometres away!"],
+  tiger: ["A big cat with orange and black stripes!", "The tiger is India's national animal!"],
+  elephant: ["The biggest animal on land, with a long trunk!", "An elephant uses its trunk to drink, smell and even say hello!"],
+  dog: ["Our best friend at home, it wags its tail!", "A dog's nose can smell things that we can't!"],
+  cat: ["A soft pet that loves milk and long naps!", "Cats sleep for about 15 hours every day!"],
+  cow: ["It eats grass and gives us milk!", "A cow's stomach has four parts!"],
+  horse: ["It runs very fast, and people ride on it!", "Horses can sleep standing up!"],
+  goat: ["It has a little beard and loves to climb rocks!", "Baby goats are called kids, just like you!"],
+  sheep: ["Its soft wool keeps us warm!", "The wool for our sweaters comes from sheep!"],
+  rooster: ["It wakes everyone up early in the morning!", "A rooster is a daddy chicken!"],
+  duck: ["It swims in the pond and has flat feet!", "Ducks have waterproof feathers, so they stay dry in water!"],
+  frog: ["It jumps very high and lives near water!", "A frog can drink water through its skin!"],
+  owl: ["It is awake at night and has big round eyes!", "An owl can turn its head almost all the way around!"],
+  monkey: ["It loves bananas and jumps from tree to tree!", "Monkeys use their hands and feet to climb trees!"],
+  pig: ["A pink animal that loves to roll in mud!", "Pigs roll in mud to stay cool on hot days!"],
+  peacock: ["It has beautiful blue and green feathers and dances in the rain!", "The peacock is India's national bird!"],
+  wolf: ["A wild animal like a big dog, it howls at night!", "Wolves live and hunt together in groups called packs!"],
+  crow: ["A black bird you often see on rooftops!", "Crows are very clever birds and can solve puzzles!"],
+  cuckoo: ["A bird that sings sweetly in the summer!", "The koel sings loudly in the summer months in India!"],
+  bee: ["A tiny buzzing insect that makes honey!", "Bees make honey from the sweet juice of flowers!"],
+  parrot: ["A green bird that can copy what we say!", "Parrots can learn to say words, just like us!"],
+};
+
+QUIZ.animals = {
+  title: "Animal Sounds",
+  emoji: "🐾",
+  question: "Who is making this sound?",
+  type: "sound",
+  items: animals.map((a) => ({
+    key: a.id,
+    name: a.name,
+    emoji: a.emoji,
+    dark: a.dark,
+    say: a.words,
+    sound: "sounds/" + a.id + ".mp3",
+    hint: ANIMAL_FACTS[a.id][0],
+    fact: ANIMAL_FACTS[a.id][1],
+  })),
+};
