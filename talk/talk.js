@@ -1,6 +1,9 @@
 // ---------- Talk: chat, quiz, story and riddles with Bolo (Hindi) ----------
 // Listening: Groq Whisper, Bolo's replies: Groq chat, both through netlify/functions/talk.
 // Bolo's voice is the phone's Hindi voice.
+//
+// Turns: Bolo speaks (🔊) -> kid's turn, mic open (🎤) -> thinking (⏳) -> Bolo speaks ...
+// The mic is only switched on while listening: on Android an open mic makes speech very quiet.
 
 (function () {
   const FUNCTION = "/.netlify/functions/talk";
@@ -8,6 +11,7 @@
 
   const $ = (id) => document.getElementById(id);
   const view = $("talkView");
+  const tBox = $("talkBox");
   const tMascot = $("tMascot");
   const tSay = $("tSay");
   const tHeard = $("tHeard");
@@ -18,6 +22,7 @@
   const tMic = $("tMic");
   const tMicLabel = $("tMicLabel");
   const tStars = $("tStars");
+  const tTip = $("tTip");
 
   const GAME_WORDS = {
     chat: ["बात", "बातें", "baat", "baatein", "chat"],
@@ -29,7 +34,7 @@
   let game = null;
   let history = [];
   let lastSay = "";
-  let thinking = false;
+  let state = "idle"; // idle | speaking | listening | thinking
   let active = false;
   let turnId = 0;
 
@@ -68,36 +73,47 @@
     return true;
   }
 
-  // ---------- Bolo's face ----------
+  // ---------- whose turn is it? ----------
+
+  const LABELS = {
+    idle: "दबाओ और बोलो!",
+    speaking: "सुनो... 🔊",
+    listening: "अब तुम बोलो! 👂",
+    thinking: "सोच रहा हूँ... 🤔",
+  };
+  const ICONS = { idle: "🎤", speaking: "🔊", listening: "🎤", thinking: "⏳" };
+
+  function setState(next) {
+    state = next;
+    tBox.dataset.state = next;
+    tMic.innerText = ICONS[next];
+    tMicLabel.innerText = LABELS[next];
+    tMic.classList.toggle("listening", next == "listening");
+  }
 
   function setMood(mood) {
     tMascot.className = "tMascot " + (mood || "happy");
   }
 
-  function sayIt(text) {
+  // Bolo says something; resolves when he has really finished speaking
+  async function sayIt(text) {
     lastSay = text;
     tSay.innerText = text;
     tSay.classList.remove("pop");
     void tSay.offsetWidth;
     tSay.classList.add("pop");
-    return speakAndWait(text);
+    setState("speaking");
+    tMascot.classList.add("talking");
+    await speak(text);
+    tMascot.classList.remove("talking");
+    if (state == "speaking") setState("idle");
   }
 
-  // speak, and resolve when Bolo has finished talking
-  function speakAndWait(text) {
-    speak(text);
-    tMascot.classList.add("talking");
-    return new Promise((done) => {
-      let started = Date.now();
-      let check = setInterval(() => {
-        let talking = "speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending);
-        if ((!talking && Date.now() - started > 600) || Date.now() - started > 30000 || !active) {
-          clearInterval(check);
-          tMascot.classList.remove("talking");
-          done();
-        }
-      }, 200);
-    });
+  // phones without a Hindi voice say nothing (or read Hindi badly): tell the grown-ups how to fix it
+  function checkHindiVoice() {
+    if (!("speechSynthesis" in window)) return;
+    let voices = speechSynthesis.getVoices();
+    tTip.hidden = !voices.length || !!hindiVoice;
   }
 
   // ---------- pictures of what Bolo talks about ----------
@@ -134,16 +150,18 @@
   }
 
   async function turn(text) {
-    if (!active || thinking) return;
+    if (!active || state == "thinking") return;
     text = (text || "").trim();
     if (!text) return;
     stopRecording(false);
+    hush();
     showOptions([]);
+    let id = ++turnId;
 
     if (isBlocked(text)) {
       setMood("calm");
       await sayIt("चलो, कुछ और मज़ेदार बात करते हैं! 🌈");
-      listenAfter(true);
+      if (id == turnId) listenSoon();
       return;
     }
     if (!underLimit()) {
@@ -154,10 +172,9 @@
 
     if (text != "[START]") tHeard.innerText = "🗣️ " + text;
     history.push({ role: "kid", text });
-    thinking = true;
+    setState("thinking");
     setMood("thinking");
-    tSay.innerText = "🤔 ...";
-    let id = ++turnId;
+    tSay.innerHTML = '<span class="tDots"><i></i><i></i><i></i></span>';
 
     let reply = null;
     try {
@@ -168,8 +185,8 @@
       });
       if (res.ok) reply = await res.json();
     } catch (e) {}
-    thinking = false;
     if (id != turnId || !active) return;
+    setState("idle");
 
     if (!reply || !reply.say) {
       history.pop();
@@ -199,34 +216,44 @@
     showPicture(reply.picture);
     showOptions(reply.options || []);
     await sayIt(reply.say);
-    if (id == turnId) listenAfter(reply.listen);
+    if (id == turnId && reply.listen) listenSoon();
   }
 
-  // after Bolo asks something, the mic opens by itself
-  function listenAfter(wanted) {
-    if (wanted && active && !thinking) startRecording(true);
+  // after Bolo asks something, the mic opens by itself (after a short pause, so it doesn't hear Bolo)
+  let listenTimer = null;
+
+  function listenSoon() {
+    clearTimeout(listenTimer);
+    listenTimer = setTimeout(() => {
+      if (active && state == "idle") startRecording(true);
+    }, 450);
   }
 
   // ---------- menu: what shall we do? ----------
 
-  function showMenu() {
+  async function showMenu() {
     game = null;
     history = [];
+    let id = ++turnId;
     tMenu.hidden = false;
     tPlay.hidden = true;
     tPicture.hidden = true;
     tHeard.innerText = "";
     showOptions([]);
     setMood("excited");
-    sayIt("नमस्ते " + kid().hindi + "! आज क्या करें? बातें, क्विज़, कहानी या पहेली? 🎈").then(() => listenAfter(true));
+    await sayIt("नमस्ते " + kid().hindi + "! आज क्या करें? बातें, क्विज़, कहानी या पहेली? 🎈");
+    if (id == turnId) listenSoon();
   }
 
   function startGame(name) {
     buzz();
+    stopRecording(false);
+    hush();
     game = name;
     history = [];
     tMenu.hidden = true;
     tPlay.hidden = false;
+    setState("idle");
     turn("[START]");
   }
 
@@ -240,18 +267,20 @@
     return null;
   }
 
-  $("tRepeat").onclick = () => {
+  $("tRepeat").onclick = async () => {
     buzz();
     stopRecording(false);
-    if (lastSay) sayIt(lastSay);
+    if (!lastSay || state == "thinking") return;
+    let id = ++turnId;
+    await sayIt(lastSay);
+    if (id == turnId) listenSoon();
   };
 
   $("tStop").onclick = () => {
     buzz();
     stopRecording(false);
     hush();
-    turnId++;
-    thinking = false;
+    setState("idle");
     showMenu();
   };
 
@@ -259,29 +288,9 @@
 
   let stream = null;
   let recorder = null;
-  let chunks = [];
   let audioCtx = null;
-  let analyser = null;
   let meterTimer = null;
   let recording = false;
-
-  function micLabel(text) {
-    tMicLabel.innerText = text;
-  }
-
-  async function openMic() {
-    if (stream) return stream;
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    return stream;
-  }
-
-  function closeMic() {
-    if (stream) stream.getTracks().forEach((t) => t.stop());
-    stream = null;
-    if (audioCtx) audioCtx.close().catch(() => {});
-    audioCtx = null;
-    analyser = null;
-  }
 
   // phones only allow audio processing after a tap: prepare it when Talk is opened
   function wakeAudio() {
@@ -289,16 +298,28 @@
     audioCtx.resume().catch(() => {});
   }
 
+  function closeMic() {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+  }
+
   async function startRecording(auto) {
-    if (recording || thinking || !active) return;
+    if (recording || !active || state == "thinking") return;
+    clearTimeout(listenTimer);
     hush();
+    recording = true; // claim the mic now, so a second tap can't start another recording
     try {
-      await openMic();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
-      micLabel("माइक चालू करने की इजाज़त दो 🎤");
+      recording = false;
+      setState("idle");
+      tMicLabel.innerText = "माइक चालू करने की इजाज़त दो 🎤";
       return;
     }
-    if (!active) return;
+    if (!active || !recording) {
+      recording = false;
+      return closeMic();
+    }
 
     let type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(
       (t) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)
@@ -306,67 +327,89 @@
     try {
       recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
     } catch (e) {
-      micLabel("इस फ़ोन में रिकॉर्डिंग नहीं हो पा रही 😕");
+      recording = false;
+      closeMic();
+      setState("idle");
+      tMicLabel.innerText = "इस फ़ोन में रिकॉर्डिंग नहीं हो पा रही 😕";
       return;
     }
-    chunks = [];
+
+    let chunks = [];
     let heardVoice = false;
-    recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-    recorder.onstop = () => {
-      tMic.classList.remove("listening");
-      micLabel("दबाओ और बोलो!");
+    let thisRecorder = recorder;
+    thisRecorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    thisRecorder.onstop = () => {
       clearInterval(meterTimer);
-      if (recorder.sendIt && heardVoice) send(new Blob(chunks, { type: recorder.mimeType || type || "audio/webm" }));
+      closeMic();
+      let blob = new Blob(chunks, { type: thisRecorder.mimeType || type || "audio/webm" });
+      if (!thisRecorder.sendIt || !active) {
+        if (state == "listening") setState("idle");
+      } else if (!heardVoice || blob.size < 1500) {
+        setState("idle");
+        if (!auto) noVoice();
+      } else {
+        send(blob);
+      }
     };
-    recorder.start();
-    recording = true;
-    tMic.classList.add("listening");
-    micLabel(auto ? "बोलो, मैं सुन रहा हूँ... 👂" : "सुन रहा हूँ... 👂");
+    thisRecorder.start(250);
+    setState("listening");
+    setMood("happy");
     if (!auto) buzz();
 
-    // stop by itself: after the kid speaks and then goes quiet, or if nobody speaks
+    // stop by itself: after the kid speaks and then goes quiet, or if nobody speaks.
+    // "Speaking" is measured against the room's own noise, so it works in quiet and noisy rooms.
     wakeAudio();
-    if (!analyser) {
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 1024;
-      audioCtx.createMediaStreamSource(stream).connect(analyser);
-    }
+    let analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    let source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
     let samples = new Float32Array(analyser.fftSize);
     let started = Date.now();
     let lastVoice = 0;
+    let noise = 0.01;
     meterTimer = setInterval(() => {
       analyser.getFloatTimeDomainData(samples);
       let level = Math.sqrt(samples.reduce((sum, x) => sum + x * x, 0) / samples.length);
       let now = Date.now();
+      if (now - started < 300) noise = Math.max(noise, level); // first moment: learn the room noise
       tMic.style.setProperty("--level", Math.min(1, level * 12).toFixed(2));
-      if (level > 0.03) {
+      if (level > Math.max(0.02, noise * 2.5)) {
         heardVoice = true;
         lastVoice = now;
       }
-      if (heardVoice && now - lastVoice > 1300) stopRecording(true);
-      else if (!heardVoice && now - started > 7000) stopRecording(false);
-      else if (now - started > 15000) stopRecording(heardVoice);
+      if (heardVoice && now - lastVoice > 1500) stopRecording(true);
+      else if (!heardVoice && now - started > 8000) stopRecording(false);
+      else if (now - started > 15000) stopRecording(true);
     }, 100);
+    thisRecorder.addEventListener("stop", () => source.disconnect(), { once: true });
   }
 
   function stopRecording(sendIt) {
     if (!recording) return;
     recording = false;
     clearInterval(meterTimer);
+    if (!recorder || recorder.state == "inactive") return closeMic();
     recorder.sendIt = sendIt;
     try {
       recorder.stop();
-    } catch (e) {}
+    } catch (e) {
+      closeMic();
+    }
   }
 
-  // Whisper sometimes "hears" these in silence
-  const NOT_SPEECH = /^(धन्यवाद|शुक्रिया|thank you|thanks for watching|सब्सक्राइब|subscribe)[.!।]?$/i;
+  async function noVoice() {
+    setMood("calm");
+    let id = ++turnId;
+    await sayIt("मुझे कुछ सुनाई नहीं दिया। माइक दबाकर ज़ोर से बोलो! 👂");
+    if (id == turnId) setState("idle");
+  }
+
+  // Whisper sometimes "hears" these in silence or noise
+  const NOT_SPEECH = /^(धन्यवाद|शुक्रिया|thank you|thanks for watching|सब्सक्राइब( करें)?|subscribe|हाँ जी|बाय)[.!।]?$/i;
 
   async function send(blob) {
-    if (blob.size < 2000) return;
-    thinking = true;
+    setState("thinking");
     setMood("thinking");
-    micLabel("समझ रहा हूँ... 🤔");
     let text = "";
     try {
       let audio = await new Promise((done) => {
@@ -377,18 +420,18 @@
       let res = await fetch(FUNCTION, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "hear", audio, mime: blob.type }),
+        body: JSON.stringify({ action: "hear", audio, mime: blob.type, kid: kid() }),
       });
       if (res.ok) text = (await res.json()).text || "";
     } catch (e) {}
-    thinking = false;
-    micLabel("दबाओ और बोलो!");
     if (!active) return;
-    text = text.trim();
-    if (!text || NOT_SPEECH.test(text)) {
+    setState("idle");
+    text = text.replace(/\s+/g, " ").trim();
+    if (!text || NOT_SPEECH.test(text) || !/[\p{L}]/u.test(text)) {
       setMood("calm");
+      let id = ++turnId;
       await sayIt("मुझे ठीक से सुनाई नहीं दिया, फिर से बोलो! 👂");
-      listenAfter(true);
+      if (id == turnId) listenSoon();
       return;
     }
     if (!game) {
@@ -403,10 +446,13 @@
     turn(text);
   }
 
+  // the big button: listen, stop listening, or interrupt Bolo and listen
   tMic.onclick = () => {
     wakeAudio();
-    if (recording) stopRecording(true);
-    else startRecording(false);
+    if (state == "thinking") return;
+    if (recording) return stopRecording(true);
+    turnId++; // whatever Bolo was about to do next is cancelled: the kid wants to talk
+    startRecording(false);
   };
 
   // ---------- joining the app's modes ----------
@@ -420,16 +466,20 @@
       active = true;
       wakeAudio();
       showStars();
+      setState("idle");
+      checkHindiVoice();
+      setTimeout(checkHindiVoice, 1500); // voices can load late
       showMenu();
     },
     leave() {
       active = false;
       turnId++;
-      thinking = false;
+      clearTimeout(listenTimer);
       stopRecording(false);
       closeMic();
+      setState("idle");
     },
   };
 
-  window.talkIsBusy = () => active && (recording || thinking);
+  window.talkIsBusy = () => active && state != "idle";
 })();

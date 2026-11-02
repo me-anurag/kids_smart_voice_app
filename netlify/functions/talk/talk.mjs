@@ -4,15 +4,19 @@
 // Netlify environment variables (Site configuration -> Environment variables):
 //   GROQ_API_KEY_1, GROQ_API_KEY_2   your two free Groq keys (key 2 is the fallback)
 //   GROQ_MODELS      optional, comma-separated chat models to try in order
-//   GROQ_STT_MODEL   optional, speech-to-text model
+//   GROQ_STT_MODELS  optional, comma-separated speech-to-text models to try in order
 
 import { systemPrompt, replySchema } from "./prompt.mjs";
 
 const API = "https://api.groq.com/openai/v1";
 const KEYS = [process.env.GROQ_API_KEY_1, process.env.GROQ_API_KEY_2].filter(Boolean);
-const MODELS = (process.env.GROQ_MODELS || "openai/gpt-oss-120b,llama-3.3-70b-versatile")
+// Llama 3.3 first: it is trained for Hindi and writes much better Hindi than gpt-oss
+const MODELS = (process.env.GROQ_MODELS || "llama-3.3-70b-versatile,openai/gpt-oss-120b")
   .split(",").map((m) => m.trim()).filter(Boolean);
-const STT_MODEL = process.env.GROQ_STT_MODEL || "whisper-large-v3-turbo";
+// the full Whisper is more accurate for children's Hindi; turbo is the backup
+const STT_MODELS = (process.env.GROQ_STT_MODELS || "whisper-large-v3,whisper-large-v3-turbo")
+  .split(",").map((m) => m.trim()).filter(Boolean);
+const URDU_SCRIPT = /[؀-ۿ]/;
 const MOODS = replySchema.properties.mood.enum;
 const GAMES = ["chat", "quiz", "story", "riddle"];
 
@@ -59,24 +63,35 @@ async function withKeys(send) {
 
 // ---------- speech to text (Groq Whisper) ----------
 
-async function hear({ audio, mime }) {
+async function hear({ audio, mime, kid }) {
   if (typeof audio != "string" || audio.length > 3_000_000) return json({ error: "bad-audio" }, 400);
   let type = typeof mime == "string" && mime.startsWith("audio/") ? mime.split(";")[0] : "audio/webm";
   let ext = type.includes("mp4") || type.includes("aac") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
   let bytes = Buffer.from(audio, "base64");
+  let name = String((kid && kid.hindi) || "").slice(0, 30);
+  // a hint for Whisper: Hindi in Devanagari, a child talking, the child's name and common words
+  let hint = `${name ? name + " नाम का " : ""}एक छोटा बच्चा हिंदी में बोलो से बात कर रहा है। हाँ, नहीं, कहानी, क्विज़, पहेली, बातें, हाथी, शेर, मुझे, क्यों, क्या।`;
 
-  let { res } = await withKeys((key) => {
-    let form = new FormData();
-    form.append("file", new Blob([bytes], { type }), "speech." + ext);
-    form.append("model", STT_MODEL);
-    form.append("language", "hi");
-    form.append("response_format", "json");
-    form.append("temperature", "0");
-    return fetch(API + "/audio/transcriptions", { method: "POST", headers: { Authorization: "Bearer " + key }, body: form });
-  });
-  if (!res || !res.ok) return json({ error: "busy" }, 503);
-  let data = await res.json();
-  return json({ text: String(data.text || "").trim().slice(0, 500) });
+  let answered = false;
+  for (let model of STT_MODELS) {
+    let { res } = await withKeys((key) => {
+      let form = new FormData();
+      form.append("file", new Blob([bytes], { type }), "speech." + ext);
+      form.append("model", model);
+      form.append("language", "hi");
+      form.append("prompt", hint);
+      form.append("response_format", "json");
+      form.append("temperature", "0");
+      return fetch(API + "/audio/transcriptions", { method: "POST", headers: { Authorization: "Bearer " + key }, body: form });
+    });
+    if (!res || !res.ok) continue;
+    answered = true;
+    let text = String((await res.json()).text || "").trim().slice(0, 500);
+    // Whisper sometimes writes Hindi in Urdu letters, or repeats the hint when it hears nothing
+    if (URDU_SCRIPT.test(text) || text.includes("छोटा बच्चा हिंदी में")) continue;
+    return json({ text });
+  }
+  return answered ? json({ text: "" }) : json({ error: "busy" }, 503);
 }
 
 // ---------- Bolo's reply (Groq chat) ----------
@@ -113,7 +128,7 @@ async function chat(body) {
         body: JSON.stringify({
           model,
           messages,
-          temperature: 0.8,
+          temperature: 0.6,
           max_completion_tokens: 900,
           ...(strict
             ? { reasoning_effort: "low", response_format: { type: "json_schema", json_schema: { name: "bolo_reply", strict: true, schema: replySchema } } }
@@ -124,13 +139,20 @@ async function chat(body) {
     if (!res || !res.ok) continue; // try the next model
     try {
       let data = await res.json();
-      let reply = JSON.parse(data.choices[0].message.content);
-      return json(tidy(reply));
-    } catch (e) {
-      continue;
-    }
+      let reply = tidy(JSON.parse(data.choices[0].message.content));
+      if (goodHindi(reply.say)) return json(reply);
+    } catch (e) {}
+    // bad JSON or not proper Hindi: try the next model
   }
   return json({ error: "busy" }, 503);
+}
+
+// Bolo must answer in Hindi written in Devanagari (not Urdu letters, not English sentences)
+function goodHindi(text) {
+  if (!text || URDU_SCRIPT.test(text)) return false;
+  let hindi = (text.match(/[ऀ-ॿ]/g) || []).length;
+  let latin = (text.match(/[A-Za-z]/g) || []).length;
+  return hindi >= 6 && latin <= hindi * 0.3;
 }
 
 // never trust the model's output shape blindly

@@ -273,6 +273,53 @@ body.mode-talk #bottom {
   transform: translateY(5px);
 }
 
+/* whose turn: Bolo speaking (blue 🔊), listening (green 🎤, rings with the voice), thinking (⏳) */
+#talkBox[data-state="speaking"] #tMic {
+  background: radial-gradient(circle at 35% 28%, #a8e4ff, #2e9bff 45%, #1a5fd0);
+  box-shadow: 0 7px 0 #123f8f, 0 14px 26px rgba(60, 0, 40, 0.45);
+  animation: pop 1.2s ease-in-out infinite;
+}
+
+#talkBox[data-state="thinking"] #tMic {
+  background: radial-gradient(circle at 35% 28%, #e7d9ff, #9b5cff 45%, #6427c7);
+  box-shadow: 0 7px 0 #45188f, 0 14px 26px rgba(60, 0, 40, 0.45);
+  animation: ponder 0.8s ease-in-out infinite alternate;
+}
+
+#talkBox[data-state="listening"] #tMicLabel {
+  color: #c8ffd0;
+  animation: pop 1s ease-in-out infinite;
+}
+
+/* "thinking" dots in the speech bubble */
+.tDots i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin: 0 4px;
+  border-radius: 50%;
+  background: #9b5cff;
+  animation: hopHop 0.5s ease-in-out infinite alternate;
+}
+
+.tDots i:nth-child(2) { animation-delay: 0.15s; }
+.tDots i:nth-child(3) { animation-delay: 0.3s; }
+
+#tTip {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: #fff3a0;
+  color: #6a2a00;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+#tTip[hidden] {
+  display: none;
+}
+
 #tMicLabel {
   margin-top: 6px;
   font-size: 17px;

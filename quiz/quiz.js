@@ -141,17 +141,7 @@
   // ---------- speaking (English) ----------
 
   function talk(text) {
-    speak(text);
-    return new Promise((done) => {
-      let started = Date.now();
-      let check = setInterval(() => {
-        let busy = "speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending);
-        if ((!busy && Date.now() - started > 500) || Date.now() - started > 15000 || !active) {
-          clearInterval(check);
-          done();
-        }
-      }, 200);
-    });
+    return active ? speak(text) : Promise.resolve();
   }
 
   // ---------- menu ----------

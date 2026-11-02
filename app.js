@@ -76,6 +76,10 @@ if ("speechSynthesis" in window) {
   speechSynthesis.onvoiceschanged = findVoice;
 }
 
+// Speaks the words and returns a promise that resolves when Bolo has really finished.
+// Uses the speech events, not guessing: on Android speech can take a second to start.
+let speechToken = 0;
+
 function speak(words) {
   let hindiNumbers = "०१२३४५६७८९";
   for (let i = 0; i < 10; i++) {
@@ -86,35 +90,63 @@ function speak(words) {
 
   if (!("speechSynthesis" in window)) {
     wiggleBuddy();
-    return;
+    return Promise.resolve();
   }
 
   // don't read emoji out loud
-  let spoken = words.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "");
-  let voice = new SpeechSynthesisUtterance(spoken);
-  let hindi = hindiMode();
-  voice.lang = hindi ? "hi-IN" : "en-IN";
-  if (hindi ? hindiVoice : englishVoice) voice.voice = hindi ? hindiVoice : englishVoice;
-  voice.rate = 0.9;
-  voice.pitch = 1.15;
-  voice.onboundary = function (event) {
-    let done = event.charIndex / spoken.length;
-    bubble.scrollTop = done * (bubble.scrollHeight - bubble.clientHeight);
-  };
-  // the mascot wiggles while it talks
-  currentVoice = voice;
-  voice.onstart = () => {
-    promptSpoken = true;
-    setTalking(true);
-  };
-  voice.onend = voice.onerror = function () {
-    if (currentVoice != voice) return; // an older sentence that was cut off
-    setTalking(false);
-    whenIdle();
-  };
+  let spoken = words.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "").trim();
+  let token = ++speechToken;
   speechSynthesis.cancel();
-  speechSynthesis.speak(voice);
-  wiggleBuddy();
+  if (!spoken) return Promise.resolve();
+
+  // one sentence at a time: some phones cut long speech off in the middle
+  let parts = spoken.split(/(?<=[।!?.])\s+/).map((p) => p.trim()).filter(Boolean);
+  let hindi = hindiMode();
+  let said = 0;
+
+  return new Promise((done) => {
+    let finished = false;
+    let started = false;
+    let finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(startGuard);
+      clearTimeout(endGuard);
+      if (token == speechToken) {
+        setTalking(false);
+        whenIdle();
+      }
+      done();
+    };
+    // if the phone has no voice at all, nothing ever starts: don't wait forever
+    let startGuard = setTimeout(() => started || finish(), 4000);
+    let endGuard = setTimeout(finish, 6000 + spoken.length * 150);
+
+    let next = () => {
+      if (token != speechToken || !parts.length) return finish();
+      let part = parts.shift();
+      let voice = new SpeechSynthesisUtterance(part);
+      voice.lang = hindi ? "hi-IN" : "en-IN";
+      let chosen = hindi ? hindiVoice : englishVoice;
+      if (chosen) voice.voice = chosen;
+      voice.rate = 0.9;
+      voice.pitch = 1.15;
+      voice.onstart = () => {
+        started = true;
+        promptSpoken = true;
+        setTalking(true);
+        bubble.scrollTop = (said / spoken.length) * (bubble.scrollHeight - bubble.clientHeight);
+        said += part.length + 1;
+      };
+      voice.onend = next;
+      voice.onerror = (e) => (e.error == "interrupted" || e.error == "canceled" ? finish() : next());
+      currentVoice = voice;
+      speechSynthesis.speak(voice);
+    };
+    // Chrome sometimes drops speech started right after cancel(): wait a moment
+    setTimeout(next, 80);
+    wiggleBuddy();
+  });
 }
 
 let currentVoice = null;
@@ -133,6 +165,8 @@ function wiggleBuddy() {
 }
 
 function hush() {
+  speechToken++; // also stops a sentence that is about to start
+  setTalking(false);
   if ("speechSynthesis" in window) speechSynthesis.cancel();
 }
 
@@ -1060,7 +1094,7 @@ function findKid(guesses) {
 
 function sayWelcome(text) {
   welcomeText.innerText = text;
-  speak(text);
+  return speak(text);
 }
 
 function askName() {
@@ -1100,16 +1134,12 @@ function welcomeKid(kid) {
   player = kid;
   if (kid) save("sv-kid", kid.name);
   tada();
-  sayWelcome(kid ? "Hello " + kid.hindi + ", आपका स्वागत है! 🎉" : "नमस्ते! आपका स्वागत है! 🎉");
+  let greeting = sayWelcome(kid ? "Hello " + kid.hindi + ", आपका स्वागत है! 🎉" : "नमस्ते! आपका स्वागत है! 🎉");
   welcomeText.innerText = kid ? "Hello " + kid.name + ", आपका स्वागत है! 🎉" : "नमस्ते! आपका स्वागत है! 🎉";
-  // go to the home screen once the greeting is said
-  let wait = setInterval(() => {
-    if (mode != "welcome") return clearInterval(wait);
-    if (!("speechSynthesis" in window) || !(speechSynthesis.speaking || speechSynthesis.pending)) {
-      clearInterval(wait);
-      pick("home");
-    }
-  }, 300);
+  // go to the home screen once the greeting has been said
+  greeting.then(() => {
+    if (mode == "welcome") pick("home");
+  });
 }
 
 $("changeName").onclick = () => {
