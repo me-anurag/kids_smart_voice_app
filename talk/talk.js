@@ -83,6 +83,8 @@
     tMicLabel.innerText = LABELS[next];
     tMic.classList.toggle("listening", next == "listening");
     tStatus.innerText = STATUS[next];
+    if (next == "listening") face(tMascot, "bolo-listening");
+    if (next == "thinking") face(tMascot, "bolo-thinking");
   }
 
   const STATUS = { idle: "ऑनलाइन 🟢", speaking: "बोल रहा है... 🔊", listening: "सुन रहा है... 👂", thinking: "सोच रहा है... 💭" };
@@ -126,8 +128,14 @@
     liveMsg = null;
   }
 
-  function setMood(mood) {
+  // Bolo's face follows his mood (in Story his normal face is the storyteller)
+  const MOOD_FACE = { excited: "bolo-celebrate", proud: "bolo-celebrate", surprised: "bolo-wow", thinking: "bolo-thinking" };
+
+  function setMood(mood, text) {
     tMascot.className = "tMascot " + (mood || "happy");
+    let name = MOOD_FACE[mood] || (game == "story" ? "bolo-storyteller" : "bolo");
+    if (text && /हाहा|हीही|😂|🤣/.test(text)) name = "bolo-laughing";
+    face(tMascot, name);
   }
 
   // Bolo says something; resolves when he has really finished speaking
@@ -260,7 +268,7 @@
     }
 
     if (game == "story") storyStep(reply);
-    setMood(reply.mood);
+    setMood(reply.mood, reply.say);
     showOptions(reply.options || []);
     let saying = sayIt(reply.say);
     showPicture(reply.picture);
@@ -630,6 +638,7 @@
   async function noVoice() {
     dropLiveBubble();
     setMood("calm");
+    face(tMascot, "bolo-confused");
     let id = ++turnId;
     await sayIt("मुझे कुछ सुनाई नहीं दिया। बटन दबाकर ज़ोर से बोलो! 👂");
     if (id == turnId) listenSoon();
@@ -641,6 +650,7 @@
     if (!text || !/[\p{L}]/u.test(text)) {
       dropLiveBubble();
       setMood("calm");
+      face(tMascot, "bolo-confused");
       let id = ++turnId;
       await sayIt("मुझे ठीक से सुनाई नहीं दिया, फिर से बोलो! 👂");
       if (id == turnId) listenSoon();

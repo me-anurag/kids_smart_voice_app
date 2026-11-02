@@ -150,6 +150,7 @@
 
   // Bolo's face on the quiz screen: "cheer" jumps for joy, "oops" tilts sadly
   function buddyMood(mood) {
+    face(qBuddy, mood == "cheer" ? "bolo-celebrate" : mood == "oops" ? "bolo-oops" : "bolo");
     qBuddy.classList.remove("cheer", "oops");
     void qBuddy.offsetWidth;
     if (mood) qBuddy.classList.add(mood);

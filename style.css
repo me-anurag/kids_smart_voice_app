@@ -498,8 +498,8 @@ body.mode-light #buddy {
   display: block;
   width: 100%;
   transform-origin: 50% 100%;
-  /* in the dark: just a shadow */
-  filter: brightness(0.2) saturate(0.4);
+  /* in the dark: Bolo asleep in his nightcap, dimmed */
+  filter: brightness(0.55) saturate(0.8);
   transition: filter 0.5s;
 }
 
@@ -551,6 +551,7 @@ body.mode-light #buddy {
 
 /* sleeping in the dark: z z Z */
 .zzz {
+  display: none; /* the sleepy face has its own z z z */
   position: absolute;
   right: 8%;
   top: -10%;

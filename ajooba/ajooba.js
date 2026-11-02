@@ -145,7 +145,10 @@
 
   // ---------- Gappu, sounds and sparkles ----------
 
+  const GAPPU_FACE = { wow: "gappu-cheer", giggle: "gappu-giggle", sad: "gappu-oops", thinking: "gappu-thinking" };
+
   function gappu(mood) {
+    face(ajGappu, GAPPU_FACE[mood] || "gappu");
     ajGappu.classList.remove("wow", "giggle", "excited", "sad");
     void ajGappu.offsetWidth;
     if (mood) ajGappu.classList.add(mood);
@@ -267,7 +270,10 @@
     let light = (i) => [...ajOptions.children].forEach((b, n) => b.classList.toggle("reading", n == i - lead));
     await talk(reading, light);
     light(-1);
-    if (id == factId && !answered) ajOptions.classList.add("waiting");
+    if (id == factId && !answered) {
+      ajOptions.classList.add("waiting");
+      gappu("thinking"); // Gappu waits for the kid's guess
+    }
   }
 
   async function guess(i) {

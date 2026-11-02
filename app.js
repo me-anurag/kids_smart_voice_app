@@ -176,6 +176,26 @@ function speak(words, onSentence) {
 
 let currentVoice = null;
 
+// ---------- mascot faces: Bolo and Gappu change expression ----------
+const FACES = {
+  bolo: "icons/mascot.png",
+  gappu: "icons/gappu.png",
+};
+for (let name of ["listening", "thinking", "wow", "celebrate", "oops", "confused", "laughing", "sleepy", "storyteller"]) {
+  FACES["bolo-" + name] = "icons/moods/bolo-" + name + ".png";
+}
+for (let name of ["thinking", "giggle", "oops", "cheer"]) {
+  FACES["gappu-" + name] = "icons/moods/gappu-" + name + ".png";
+}
+
+function face(img, name) {
+  let src = FACES[name] || FACES.bolo;
+  if (img && img.getAttribute("src") != src) img.setAttribute("src", src);
+}
+
+// get the faces ready in the background, so they change instantly
+setTimeout(() => Object.values(FACES).forEach((src) => (new Image().src = src)), 4000);
+
 function setTalking(on) {
   document.querySelectorAll(".talker").forEach((el) => el.classList.toggle("talking", on));
   buddy.classList.toggle("talking", on);
@@ -292,7 +312,10 @@ function tr(hindi, english) {
 }
 
 function setTalkLabel() {
-  if (mode == "welcome") talkLabel.innerText = listening ? "सुन रहा हूँ..." : "दबाओ और बोलो!";
+  if (mode == "welcome") {
+    talkLabel.innerText = listening ? "सुन रहा हूँ..." : "दबाओ और बोलो!";
+    if (listening) face(welcomeBuddy, "bolo-listening");
+  }
   else talkLabel.innerText = listening ? tr("सुन रहा हूँ...", "Listening...") : tr("दबाओ और बोलो!", "Tap and talk!");
 }
 
@@ -385,6 +408,7 @@ function setLight(color, saveIt = true) {
   lightView.style.setProperty("--glow", color);
   lightView.classList.toggle("on", on);
   bulbWrap.classList.toggle("on", on);
+  face(lightBuddy.querySelector("img"), on ? "bolo" : "bolo-sleepy");
   // the mascot wakes up with a little jump when the light comes on
   if (on && !wasOn) {
     lightBuddy.classList.remove("wake");
@@ -1188,6 +1212,7 @@ function sayWelcome(text) {
 }
 
 function askName() {
+  face(welcomeBuddy, "bolo");
   // the app opens only with the full sentence; name buttons are just for phones that can't listen
   kidGrid.hidden = !!mic;
   for (let b of kidGrid.children) b.classList.toggle("last", b.innerText.includes(load("sv-kid", "-")));
@@ -1208,6 +1233,7 @@ function nameCommand(heard, otherGuesses) {
   let kid = full.length ? findKid(full) : null;
   if (kid) return welcomeKid(kid);
 
+  face(welcomeBuddy, "bolo-confused");
   let nameOnly = findKid(guesses);
   if (nameOnly) {
     // the name alone is not enough: teach the full sentence
@@ -1222,6 +1248,7 @@ function nameCommand(heard, otherGuesses) {
 
 function welcomeKid(kid) {
   player = kid;
+  face(welcomeBuddy, "bolo-celebrate");
   if (kid) save("sv-kid", kid.name);
   tada();
   let greeting = sayWelcome(kid ? "Hello " + kid.hindi + ", आपका स्वागत है! 🎉" : "नमस्ते! आपका स्वागत है! 🎉");
