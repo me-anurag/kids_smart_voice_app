@@ -31,6 +31,7 @@ const FILES = [
   "ajooba/ajooba.css",
   "icons/gappu.png",
   "icons/gappu-small.png",
+  "icons/talk.png",
   "sounds/bee.mp3",
   "sounds/cat.mp3",
   "sounds/cow.mp3",
