@@ -284,7 +284,7 @@ const MODES = {
 
 // Pictures talks in Hindi, everything else in English
 function hindiMode() {
-  return mode == "picture" || mode == "welcome" || mode == "talk" || mode == "ajooba";
+  return ["picture", "welcome", "talk", "story", "ajooba"].includes(mode);
 }
 
 function tr(hindi, english) {
@@ -321,10 +321,11 @@ function pick(name) {
 
   if (MODES[mode] && MODES[mode].leave) MODES[mode].leave();
   mode = name;
-  body.className = "mode-" + name;
+  body.className = "mode-" + name + (MODES[name] && MODES[name].classes ? " " + MODES[name].classes : "");
   home.hidden = name != "home";
   welcome.hidden = name != "welcome";
-  for (let [key, m] of Object.entries(MODES)) m.view.hidden = key != name;
+  // a screen can belong to more than one mode (Talk and Story share one)
+  for (let m of Object.values(MODES)) m.view.hidden = !MODES[name] || m.view != MODES[name].view;
   if (name == "welcome") {
     setTalkLabel();
     askName();

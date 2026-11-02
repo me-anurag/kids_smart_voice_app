@@ -1105,14 +1105,14 @@ body.mode-home #bottom {
 }
 
 #homeMascot {
-  width: min(48vw, 19vh);
+  width: min(40vw, 15vh);
   margin-top: 1vh;
   animation: bob 2.4s ease-in-out infinite;
 }
 
 #homeTitle {
   margin: 0;
-  font-size: 40px;
+  font-size: 34px;
   text-align: center;
   font-weight: 800;
   line-height: 1;
@@ -1121,7 +1121,8 @@ body.mode-home #bottom {
 }
 
 #homeSub {
-  margin: 4px 0 12px;
+  margin: 2px 0 10px;
+  font-size: 18px;
   font-size: 21px;
   font-weight: 700;
   text-shadow: 0 2px 0 #6a00b8;
@@ -1132,7 +1133,7 @@ body.mode-home #bottom {
   max-width: 420px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 11px;
 }
 
 .homeTile {
@@ -1158,6 +1159,12 @@ body.mode-home #bottom {
 .homeTile:nth-child(5) { animation-delay: 0.32s; }
 .homeTile:nth-child(6) { animation-delay: 0.4s; }
 
+.homeTile[data-mode="story"] {
+  background: radial-gradient(circle at 25% 20%, #e7d9ff, #9b5cff 55%, #6427c7);
+  box-shadow: 0 7px 0 #45188f, 0 12px 22px rgba(60, 0, 90, 0.3);
+  text-shadow: 0 2px 0 #45188f;
+}
+
 .homeTile[data-mode="ajooba"] {
   background: radial-gradient(circle at 25% 20%, #a8f0ff, #22b8d6 50%, #2e6fe0);
   box-shadow: 0 7px 0 #1a4aa8, 0 12px 22px rgba(60, 0, 90, 0.3);
@@ -1165,8 +1172,8 @@ body.mode-home #bottom {
 }
 
 .homeTile .tileEmoji img {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
 }
 
@@ -1218,15 +1225,15 @@ body.mode-home #bottom {
 }
 
 .tileEmoji {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
+  font-size: 32px;
   flex-shrink: 0;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
   text-shadow: none;
 }
 

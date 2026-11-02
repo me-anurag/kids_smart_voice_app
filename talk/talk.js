@@ -17,19 +17,10 @@
   const tHeard = $("tHeard");
   const tPicture = $("tPicture");
   const tOptions = $("tOptions");
-  const tMenu = $("tMenu");
-  const tPlay = $("tPlay");
   const tMic = $("tMic");
   const tMicLabel = $("tMicLabel");
   const tStars = $("tStars");
   const tTip = $("tTip");
-
-  const GAME_WORDS = {
-    chat: ["बात", "बातें", "baat", "baatein", "chat"],
-    rhyme: ["कविता", "kavita", "poem", "rhyme", "गाना", "gaana", "तुकबंदी"],
-    story: ["कहानी", "kahani", "story"],
-    riddle: ["पहेली", "paheli", "riddle"],
-  };
 
   let game = null;
   let history = [];
@@ -224,42 +215,20 @@
     if (active && state == "idle") tMicLabel.innerText = "दबाओ और बोलो! 👇";
   }
 
-  // ---------- menu: what shall we do? ----------
-
-  async function showMenu() {
-    game = null;
-    history = [];
-    let id = ++turnId;
-    tMenu.hidden = false;
-    tPlay.hidden = true;
-    tPicture.hidden = true;
-    tHeard.innerText = "";
-    showOptions([]);
-    setMood("excited");
-    await sayIt("नमस्ते " + kid().hindi + "! आज क्या करें? बातें, कविता, कहानी या पहेली? 🎈");
-    if (id == turnId) listenSoon();
-  }
+  // ---------- starting: Talk opens straight into a chat, Story straight into a story ----------
+  // (rhymes "rhyme" and riddles "riddle" also work on the server; they are kept for later)
 
   function startGame(name) {
-    buzz();
     stopRecording(false);
     hush();
     game = name;
     history = [];
-    tMenu.hidden = true;
-    tPlay.hidden = false;
+    tPicture.hidden = true;
+    tHeard.innerText = "";
+    showOptions([]);
     setState("idle");
+    setMood("excited");
     turn("[START]");
-  }
-
-  for (let b of document.querySelectorAll(".tGame")) b.onclick = () => startGame(b.dataset.game);
-
-  function pickGameFromWords(text) {
-    let clean = cleanText(text);
-    for (let [name, words] of Object.entries(GAME_WORDS)) {
-      if (words.some((w) => clean.includes(cleanText(w)))) return name;
-    }
-    return null;
   }
 
   $("tRepeat").onclick = async () => {
@@ -271,12 +240,14 @@
     if (id == turnId) listenSoon();
   };
 
+  // stop: Bolo stops talking (and listening)
   $("tStop").onclick = () => {
     buzz();
+    turnId++;
     stopRecording(false);
     hush();
+    tMascot.classList.remove("talking");
     setState("idle");
-    showMenu();
   };
 
   // ---------- listening ----------
@@ -531,15 +502,6 @@
       if (id == turnId) listenSoon();
       return;
     }
-    if (!game) {
-      // in the menu: "कहानी" starts a story, anything else starts a chat about it
-      let picked = pickGameFromWords(text);
-      game = picked || "chat";
-      history = [];
-      tMenu.hidden = true;
-      tPlay.hidden = false;
-      return turn(picked ? "[START]" : text);
-    }
     turn(text);
   }
 
@@ -554,29 +516,36 @@
 
   // ---------- joining the app's modes ----------
 
-  MODES.talk = {
-    view,
-    title: "Talk",
-    hints: [],
-    hello: "",
-    enter() {
-      active = true;
-      wakeAudio();
-      showStars();
-      setState("idle");
-      checkHindiVoice();
-      setTimeout(checkHindiVoice, 1500); // voices can load late
-      showMenu();
-    },
-    leave() {
-      active = false;
-      turnId++;
-      clearTimeout(listenTimer);
-      stopRecording(false);
-      closeMic();
-      setState("idle");
-    },
-  };
+  // Talk and Story share this screen; each opens straight into its own game
+  function talkMode(title, gameName) {
+    return {
+      view,
+      title,
+      classes: "mode-talk",
+      hints: [],
+      hello: "",
+      enter() {
+        active = true;
+        wakeAudio();
+        showStars();
+        setState("idle");
+        checkHindiVoice();
+        setTimeout(checkHindiVoice, 1500); // voices can load late
+        startGame(gameName);
+      },
+      leave() {
+        active = false;
+        turnId++;
+        clearTimeout(listenTimer);
+        stopRecording(false);
+        closeMic();
+        setState("idle");
+      },
+    };
+  }
+
+  MODES.talk = talkMode("Talk", "chat");
+  MODES.story = talkMode("Story", "story");
 
   window.talkIsBusy = () => active && state != "idle";
 })();

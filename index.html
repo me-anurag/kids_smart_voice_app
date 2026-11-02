@@ -43,6 +43,10 @@
   <h1 id="homeTitle">Bolo Bolo</h1>
   <p id="homeSub">What do you want to play?</p>
   <div id="homeTiles">
+    <button class="homeTile wide" data-mode="talk">
+      <span class="tileEmoji">💬</span>
+      <span class="tileName">Talk with Bolo</span>
+    </button>
     <button class="homeTile" data-mode="light">
       <span class="tileEmoji">💡</span>
       <span class="tileName">Lights</span>
@@ -55,10 +59,6 @@
       <span class="tileEmoji">🐾</span>
       <span class="tileName">Animal Sounds</span>
     </button>
-    <button class="homeTile" data-mode="talk">
-      <span class="tileEmoji">💬</span>
-      <span class="tileName">Talk</span>
-    </button>
     <button class="homeTile" data-mode="quiz">
       <span class="tileEmoji">🏆</span>
       <span class="tileName">Quiz</span>
@@ -66,6 +66,10 @@
     <button class="homeTile" data-mode="ajooba">
       <span class="tileEmoji"><img src="icons/gappu-small.png" alt=""></span>
       <span class="tileName">Ajooba</span>
+    </button>
+    <button class="homeTile" data-mode="story">
+      <span class="tileEmoji">📖</span>
+      <span class="tileName">Story</span>
     </button>
   </div>
   <button id="changeName">🔄 Change</button>
@@ -124,13 +128,7 @@
       <p id="tSay">नमस्ते! 👋</p>
       <p id="tHeard"></p>
       <p id="tTip" hidden>🔈 This phone has no Hindi voice. Grown-ups: Settings → Text-to-speech → Google → Install voice data → Hindi.</p>
-      <div id="tMenu">
-        <button class="tGame" data-game="chat"><span>🗣️</span>बातें</button>
-        <button class="tGame" data-game="rhyme"><span>🎵</span>कविता</button>
-        <button class="tGame" data-game="story"><span>📖</span>कहानी</button>
-        <button class="tGame" data-game="riddle"><span>🤔</span>पहेली</button>
-      </div>
-      <div id="tPlay" hidden>
+      <div id="tPlay">
         <div id="tOptions"></div>
       </div>
       <div id="tControls">
