@@ -194,11 +194,12 @@
     <div id="qConfetti"></div>
   </section>
 
-  <!-- Ajooba: Gappu's surprising facts (ajooba/ajooba.js) -->
+  <!-- Ajooba: guess first, then the surprise, with Gappu (ajooba/ajooba.js) -->
   <section id="ajoobaView" class="view" hidden>
     <div id="ajBox">
       <div id="ajTop">
-        <span id="ajToday">🌟 आज: 0 / 5</span>
+        <span id="ajToday">🌟 0/5</span>
+        <span id="ajRight">✅ 0</span>
         <button id="ajSavedBtn">⭐ मेरे अजूबे <b id="ajSavedCount">0</b></button>
       </div>
       <div id="ajCard" class="loading">
@@ -207,22 +208,29 @@
         <div id="ajEmojiArt"><span id="ajEmoji"></span></div>
         <div id="ajLoader"><span>🔍</span></div>
         <span id="ajTopic"></span>
+        <span id="ajNumber"></span>
+        <span id="ajZoomHint">🔍</span>
+        <div id="ajResult" hidden></div>
       </div>
       <div id="ajTalkRow">
         <img id="ajGappu" class="talker" src="icons/gappu.png" alt="Gappu">
-        <p id="ajFact"></p>
+        <p id="ajSay"></p>
       </div>
-      <div id="ajReact">
-        <button data-r="wow">😲 वाह!</button>
-        <button data-r="haha">😂 हाहा!</button>
-        <button data-r="save">⭐ सेव</button>
+      <div id="ajOptions"></div>
+      <div id="ajActions" hidden>
+        <div id="ajSmall">
+          <button id="ajWow">🤩 वाह!</button>
+          <button id="ajAgain" aria-label="फिर से सुनो">🔁</button>
+          <button id="ajSave">⭐ सेव</button>
+        </div>
+        <button id="ajNext">अगला अजूबा ▶</button>
       </div>
-      <button id="ajNext">🎲 अगला अजूबा!</button>
     </div>
     <div id="ajSaved" hidden>
       <div id="ajSavedHead"><b>⭐ मेरे अजूबे</b><button id="ajSavedClose" aria-label="Close">✖</button></div>
       <div id="ajSavedList"></div>
     </div>
+    <div id="ajZoom" hidden><img alt=""><span>✖</span></div>
   </section>
 
   <!-- Pictures mode -->

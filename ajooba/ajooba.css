@@ -1,9 +1,9 @@
-/* ---------- Ajooba: Gappu's surprising facts ---------- */
+/* ---------- Ajooba: guess first, then the surprise ---------- */
 
 body.mode-ajooba {
   background:
-    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.2), transparent 60%),
-    linear-gradient(160deg, #00a8a8 0%, #2e6fe0 50%, #7b2ff7 100%);
+    radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.22), transparent 55%),
+    linear-gradient(165deg, #00b4c6 0%, #2e6fe0 45%, #6a2bd9 100%);
 }
 
 /* Ajooba has its own buttons */
@@ -24,34 +24,36 @@ body.mode-ajooba #bottom {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   padding-bottom: 14px;
 }
 
-/* ---------- top: today's count and saved facts ---------- */
+/* ---------- top: counters ---------- */
 
 #ajTop {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 #ajToday,
+#ajRight,
 #ajSavedBtn {
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 999px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   white-space: nowrap;
 }
 
-#ajToday {
+#ajToday,
+#ajRight {
   background: rgba(255, 255, 255, 0.25);
   border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 #ajSavedBtn {
+  margin-left: auto;
   background: #ffd60a;
   color: #6a2a00;
   box-shadow: 0 4px 0 #c99500;
@@ -66,13 +68,13 @@ body.mode-ajooba #bottom {
   background: #fff;
 }
 
-/* ---------- the picture card ---------- */
+/* ---------- the picture card: the whole photo, never cut ---------- */
 
 #ajCard {
   position: relative;
   flex: 1;
-  min-height: 150px;
-  max-height: 36vh;
+  min-height: 140px;
+  max-height: 32vh;
   border-radius: 26px;
   border: 5px solid #fff;
   overflow: hidden;
@@ -80,27 +82,27 @@ body.mode-ajooba #bottom {
   box-shadow: 0 8px 0 rgba(20, 30, 90, 0.35);
 }
 
-/* the whole photo is shown; a blurred copy fills the space around it */
 #ajPhoto,
 #ajPhotoBg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   display: none;
 }
 
+/* the whole photo (contain), with a blurred copy of it filling the space around */
 #ajPhoto {
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
 }
 
 #ajPhotoBg {
-  inset: -10%;
-  width: 120%;
-  height: 120%;
+  inset: -12%;
+  width: 124%;
+  height: 124%;
   object-fit: cover;
-  filter: blur(18px) saturate(1.3);
+  filter: blur(18px) saturate(1.3) brightness(0.9);
 }
 
 #ajCard.photo #ajPhoto,
@@ -121,7 +123,7 @@ body.mode-ajooba #bottom {
 }
 
 #ajEmoji {
-  font-size: min(28vw, 16vh);
+  font-size: min(26vw, 15vh);
   filter: drop-shadow(0 6px 0 rgba(120, 50, 0, 0.25));
 }
 
@@ -131,7 +133,7 @@ body.mode-ajooba #bottom {
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 54px;
+  font-size: 50px;
   background: linear-gradient(110deg, #1d5fb8 30%, #3b86e8 50%, #1d5fb8 70%);
   background-size: 250% 100%;
   animation: shimmer 1.2s linear infinite;
@@ -146,31 +148,92 @@ body.mode-ajooba #bottom {
 }
 
 #ajCard.pop {
-  animation: bounceIn 0.6s ease;
+  animation: bounceIn 0.55s ease;
 }
 
-#ajCard.photo #ajPhoto {
-  animation: kenburns 10s ease-in-out infinite alternate;
+#ajCard.reveal {
+  animation: pop 0.5s ease;
 }
 
-#ajTopic {
+#ajTopic,
+#ajNumber {
   position: absolute;
-  left: 10px;
-  top: 10px;
+  top: 9px;
   z-index: 2;
-  padding: 4px 12px;
+  padding: 3px 11px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #1d3f8f;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
 }
 
+#ajTopic {
+  left: 9px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d3f8f;
+}
+
+#ajNumber {
+  right: 9px;
+  background: #6a2bd9;
+  color: #fff;
+}
+
+#ajZoomHint {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+#ajCard.photo #ajZoomHint {
+  display: flex;
+}
+
+/* the answer ribbon across the bottom of the photo */
+#ajResult {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 7px 12px;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  color: #fff;
+  animation: ribbon 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+#ajResult[hidden] {
+  display: none;
+}
+
+#ajResult.right {
+  background: linear-gradient(90deg, #16a34a, #3ed16f);
+}
+
+#ajResult.wrong {
+  background: linear-gradient(90deg, #f59e0b, #ff7a1a);
+}
+
+@keyframes ribbon {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 .ajSpark {
   position: absolute;
-  bottom: 10%;
-  z-index: 3;
+  bottom: 12%;
+  z-index: 4;
   font-size: 26px;
   pointer-events: none;
   animation: sparkUp 1.6s ease-out forwards;
@@ -179,21 +242,21 @@ body.mode-ajooba #bottom {
 @keyframes sparkUp {
   0% { transform: translateY(0) scale(0.4); opacity: 0; }
   20% { opacity: 1; }
-  100% { transform: translateY(-160px) scale(1.2) rotate(30deg); opacity: 0; }
+  100% { transform: translateY(-150px) scale(1.2) rotate(30deg); opacity: 0; }
 }
 
-/* ---------- Gappu and the fact ---------- */
+/* ---------- Gappu and what he says ---------- */
 
 #ajTalkRow {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 #ajGappu {
-  width: min(34vw, 18vh);
-  margin-left: -6px;
+  width: min(30vw, 15vh);
   flex-shrink: 0;
+  margin-left: -6px;
   transform-origin: 50% 100%;
   filter: drop-shadow(0 5px 0 rgba(20, 30, 90, 0.3));
   animation: bob 2.4s ease-in-out infinite;
@@ -215,6 +278,10 @@ body.mode-ajooba #bottom {
   animation: gappuGiggle 0.18s ease-in-out 8 alternate;
 }
 
+#ajGappu.sad {
+  animation: gappuSad 1s ease;
+}
+
 @keyframes gappuWow {
   0%, 100% { transform: scale(1) translateY(0); }
   35% { transform: scale(1.18) translateY(-20px) rotate(-6deg); }
@@ -226,55 +293,135 @@ body.mode-ajooba #bottom {
   to { transform: rotate(6deg) translateY(-6px); }
 }
 
-#ajFact {
+@keyframes gappuSad {
+  0%, 100% { transform: rotate(0); }
+  40% { transform: rotate(-10deg) translateY(4px) scale(0.97); }
+}
+
+#ajSay {
   flex: 1;
   min-width: 0;
-  margin: 0 0 10px;
-  padding: 12px 16px;
-  max-height: 24vh;
+  margin: 0 0 8px;
+  padding: 11px 15px;
+  max-height: 20vh;
   overflow-y: auto;
   border-radius: 22px 22px 22px 6px;
   background: #fff;
   color: #1d2f6f;
   font-size: 20px;
-  font-weight: 700;
-  line-height: 1.5;
+  font-weight: 800;
+  line-height: 1.45;
   box-shadow: 0 5px 0 rgba(20, 30, 90, 0.3);
   scrollbar-width: none;
 }
 
-/* ---------- reactions and next ---------- */
+/* after the guess the bubble holds the surprising fact */
+#ajSay.fact {
+  background: #fffbe6;
+  font-weight: 700;
+  font-size: 19px;
+  box-shadow: 0 0 0 3px #ffd60a, 0 5px 0 rgba(20, 30, 90, 0.3);
+  animation: pop 0.4s ease;
+}
 
-#ajReact {
+/* ---------- the choices ---------- */
+
+#ajOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#ajOptions[hidden] {
+  display: none;
+}
+
+.ajOption {
+  padding: 11px 16px;
+  border-radius: 18px;
+  background: #fff;
+  color: #1d2f6f;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: left;
+  box-shadow: 0 5px 0 rgba(20, 30, 90, 0.3);
+  animation: tileIn 0.4s backwards cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  transition: transform 0.12s, background 0.2s;
+}
+
+.ajOption:nth-child(2) { animation-delay: 0.08s; }
+.ajOption:nth-child(3) { animation-delay: 0.16s; }
+
+.ajOption:active {
+  transform: translateY(4px);
+}
+
+/* the choice Gappu is reading lights up */
+.ajOption.reading {
+  background: #fff3a0;
+  transform: scale(1.04);
+  box-shadow: 0 0 0 4px #ffd60a, 0 5px 0 rgba(20, 30, 90, 0.3);
+}
+
+/* waiting for the kid: the choices gently bounce */
+#ajOptions.waiting .ajOption {
+  animation: pop 1.6s ease-in-out infinite;
+}
+
+#ajOptions.waiting .ajOption:nth-child(2) { animation-delay: 0.25s; }
+#ajOptions.waiting .ajOption:nth-child(3) { animation-delay: 0.5s; }
+
+.ajOption.right {
+  background: #3ed16f;
+  color: #fff;
+  box-shadow: 0 5px 0 #16903f;
+  animation: pop 0.4s ease;
+}
+
+.ajOption.wrong {
+  background: #ff8095;
+  color: #fff;
+  box-shadow: 0 5px 0 #c2334f;
+  animation: shake 0.4s ease;
+}
+
+.ajOption:disabled {
+  opacity: 1;
+}
+
+/* ---------- after the answer ---------- */
+
+#ajActions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+#ajActions[hidden] {
+  display: none;
+}
+
+#ajSmall {
   display: flex;
   gap: 8px;
 }
 
-#ajReact button {
+#ajSmall button {
   flex: 1;
-  padding: 10px 4px;
+  padding: 10px 6px;
   border-radius: 18px;
   background: #fff;
   color: #1d2f6f;
   font-size: 18px;
   font-weight: 800;
   box-shadow: 0 5px 0 rgba(20, 30, 90, 0.3);
-  white-space: nowrap;
-  transition: transform 0.1s;
 }
 
-#ajReact button:active {
-  transform: translateY(4px);
+#ajSmall #ajAgain {
+  flex: 0 0 56px;
 }
 
-#ajReact.ready button {
-  animation: pop 1.4s ease-in-out infinite;
-}
-
-#ajReact.ready button:nth-child(2) { animation-delay: 0.2s; }
-#ajReact.ready button:nth-child(3) { animation-delay: 0.4s; }
-
-#ajReact button.done {
+#ajSmall button.done {
   background: #ffd60a;
   color: #6a2a00;
 }
@@ -282,7 +429,7 @@ body.mode-ajooba #bottom {
 #ajNext {
   padding: 14px;
   border-radius: 24px;
-  border: 3px solid rgba(255, 255, 255, 0.8);
+  border: 3px solid rgba(255, 255, 255, 0.85);
   background: radial-gradient(circle at 30% 20%, #fff3a0, #ffb800 50%, #ff6a00);
   box-shadow: 0 7px 0 #b34700, 0 12px 22px rgba(20, 30, 90, 0.3);
   color: #fff;
@@ -292,11 +439,55 @@ body.mode-ajooba #bottom {
   transition: transform 0.1s;
 }
 
+#ajNext.ready {
+  animation: pop 1.3s ease-in-out infinite;
+}
+
 #ajNext:active {
   transform: translateY(5px);
 }
 
-/* ---------- my saved facts ---------- */
+/* ---------- tap a photo: see it big ---------- */
+
+#ajZoom {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 10, 40, 0.9);
+}
+
+#ajZoom[hidden] {
+  display: none;
+}
+
+#ajZoom img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: bounceIn 0.4s ease;
+}
+
+#ajZoom span {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 16px);
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ff4f6d;
+  color: #fff;
+  font-size: 20px;
+}
+
+/* ---------- my saved wonders ---------- */
 
 #ajSaved {
   position: absolute;

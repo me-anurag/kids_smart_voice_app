@@ -138,7 +138,7 @@ function speak(words, onSentence) {
       let chosen = hindi ? hindiVoice : englishVoice;
       if (chosen) voice.voice = chosen;
       voice.rate = 0.9;
-      voice.pitch = mode == "ajooba" ? 1.5 : 1.15; // Gappu the baby elephant has a higher, cuter voice
+      voice.pitch = mode == "ajooba" ? 1.25 : 1.15; // Gappu: a little higher than Bolo, still clear
       let began = false;
       let i = index;
       voice.onstart = () => {

@@ -1,5 +1,6 @@
-// ---------- Ajooba: Gappu the explorer elephant tells surprising facts, in Hindi ----------
-// Mixed topics, a picture for every fact, reactions (वाह / हाहा), saved favourites per kid.
+// ---------- Ajooba: "guess first, then the surprise!" with Gappu the explorer elephant (Hindi) ----------
+// Each wonder: Gappu asks a question, reads the choices (each lights up), the kid guesses,
+// then the surprising answer is revealed with the photo. Saved favourites and counters per kid.
 
 (function () {
   const DAILY_GOAL = 5;
@@ -10,32 +11,45 @@
   const ajPhotoBg = $("ajPhotoBg");
   const ajEmoji = $("ajEmoji");
   const ajTopic = $("ajTopic");
-  const ajFact = $("ajFact");
+  const ajNumber = $("ajNumber");
+  const ajSay = $("ajSay");
   const ajGappu = $("ajGappu");
-  const ajNext = $("ajNext");
+  const ajOptions = $("ajOptions");
+  const ajResult = $("ajResult");
+  const ajActions = $("ajActions");
   const ajToday = $("ajToday");
+  const ajRight = $("ajRight");
   const ajSavedCount = $("ajSavedCount");
   const ajSaved = $("ajSaved");
   const ajSavedList = $("ajSavedList");
-  const ajReact = $("ajReact");
+  const ajZoom = $("ajZoom");
 
-  const TEASERS = [
-    "पता है?",
-    "अरे सुनो, सुनो!",
-    "एक मज़ेदार बात बताऊँ?",
-    "यह सुनकर तुम चौंक जाओगे!",
-    "मेरी खोज में मुझे एक अजूबा मिला!",
-    "कान खोलकर सुनो!",
-  ];
-  const AFTER = ["है ना कमाल?", "हाहा, मज़ेदार है ना?", "क्या तुम्हें पता था?", "वाह! और एक सुनोगे?", "अजीब है ना?"];
-  const WOW = ["वाह! है ना कमाल?", "हाँ! मैं भी सुनकर हैरान हो गया था!", "सच में अजूबा है ना!"];
-  const HAHA = ["हीहीही! बहुत मज़ेदार है ना?", "हाहाहा! मुझे भी हँसी आ गई!", "हीही! है ना मज़ेदार?"];
+  // many short lines, never the same one twice in a row
+  const LINES = {
+    first: ["नमस्ते {name}! मैं गप्पू हूँ, अजूबे खोजने वाला हाथी। चलो, एक पहेली से शुरू करते हैं!"],
+    ask: ["अंदाज़ा लगाओ!", "सोचो, सोचो!", "बताओ तो सही!", "चलो देखते हैं!", "यह वाला मुश्किल है!", "ध्यान से सुनो!", ""],
+    right: ["शाबाश! बिल्कुल सही!", "वाह! सही जवाब!", "अरे वाह, तुम तो पक्के खोजी हो!", "एकदम सही!", "हाँ! तुमने सही पकड़ा!", "कमाल कर दिया!"],
+    wrong: ["उफ़! अच्छा अंदाज़ा था।", "ओहो, नहीं!", "अरे नहीं! पर कोई बात नहीं।", "हम्म, यह नहीं!", "अरे! यह तो चौंकाने वाला है।"],
+    funny: ["हाहाहा!", "हीहीही!", "हाहा, सोचो ज़रा!"],
+    wow: ["वाह! है ना कमाल?", "सच में! मैं भी हैरान हो गया था!", "अजूबा है ना!"],
+    giggle: ["हीहीही! मुझे भी हँसी आ गई!", "हाहाहा! पागलपन है ना?"],
+    saved: ["यह अजूबा तुम्हारी लिस्ट में आ गया!", "सेव हो गया! बाद में फिर सुनना।"],
+  };
+  const lastLine = {};
+
+  function line(kind) {
+    let list = LINES[kind].filter((l) => l != lastLine[kind] || LINES[kind].length == 1);
+    let pick = list[Math.floor(Math.random() * list.length)];
+    lastLine[kind] = pick;
+    return pick.replace("{name}", who().hindi);
+  }
 
   let active = false;
   let fact = null;
   let factId = 0;
   let firstTime = true;
-  let counted = false;
+  let answered = false;
+  let shownOptions = []; // the choices as shown, with which one is right
 
   // ---------- each kid's own Ajooba progress ----------
 
@@ -47,13 +61,14 @@
     let today = new Date().toISOString().slice(0, 10);
     let p;
     try {
-      p = Object.assign({ seen: [], saved: [], day: today, today: 0, total: 0 }, JSON.parse(localStorage.getItem("ajooba-" + who().name)));
+      p = Object.assign({ seen: [], saved: [], day: today, today: 0, right: 0, total: 0 }, JSON.parse(localStorage.getItem("ajooba-" + who().name)));
     } catch (e) {
-      p = { seen: [], saved: [], day: today, today: 0, total: 0 };
+      p = { seen: [], saved: [], day: today, today: 0, right: 0, total: 0 };
     }
     if (p.day != today) {
       p.day = today;
       p.today = 0;
+      p.right = 0;
     }
     return p;
   }
@@ -66,15 +81,22 @@
 
   function showCounters() {
     let p = progress();
-    ajToday.innerText = "🌟 आज: " + p.today + (p.today < DAILY_GOAL ? " / " + DAILY_GOAL : "");
+    ajToday.innerText = "🌟 " + p.today + (p.today < DAILY_GOAL ? "/" + DAILY_GOAL : "");
+    ajRight.innerText = "✅ " + p.right;
     ajSavedCount.innerText = p.saved.length;
+    let saveBtn = $("ajSave");
     let saved = fact && p.saved.includes(fact.id);
-    let saveBtn = ajReact.querySelector('[data-r="save"]');
     saveBtn.classList.toggle("done", !!saved);
-    saveBtn.innerText = saved ? "⭐ सेव हो गया" : "⭐ सेव";
+    saveBtn.innerText = saved ? "⭐ सेव है" : "⭐ सेव";
   }
 
-  // ---------- choosing the next fact: unseen first, a different topic from the last one ----------
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  // ---------- choosing the next wonder: unseen first, a different topic from the last one ----------
 
   function randomOf(list) {
     return list[Math.floor(Math.random() * list.length)];
@@ -84,7 +106,7 @@
     let p = progress();
     let unseen = AJOOBA.filter((f) => !p.seen.includes(f.id));
     if (!unseen.length) {
-      p.seen = []; // every fact seen: start again
+      p.seen = []; // every wonder seen: start again
       saveProgress(p);
       unseen = AJOOBA;
     }
@@ -98,7 +120,7 @@
 
   function pictureOf(title) {
     if (!pictures.has(title)) {
-      let job = wiki("en", { titles: title, prop: "pageimages", piprop: "thumbnail", pithumbsize: 640 })
+      let job = wiki("en", { titles: title, prop: "pageimages", piprop: "thumbnail", pithumbsize: 800 })
         .then((data) => {
           let page = goodPages(data)[0];
           let url = page && page.thumbnail && page.thumbnail.source;
@@ -121,144 +143,253 @@
     return pictures.get(title);
   }
 
-  // ---------- Gappu's face and little effects ----------
+  // ---------- Gappu, sounds and sparkles ----------
 
   function gappu(mood) {
-    ajGappu.classList.remove("wow", "giggle", "excited");
+    ajGappu.classList.remove("wow", "giggle", "excited", "sad");
     void ajGappu.offsetWidth;
     if (mood) ajGappu.classList.add(mood);
   }
+
+  let synth = null;
+
+  function notes(list, type = "triangle", gap = 0.09, volume = 0.15, slide = 0) {
+    try {
+      synth = synth || new (window.AudioContext || window.webkitAudioContext)();
+      synth.resume().catch(() => {});
+      let t = synth.currentTime;
+      list.forEach((freq, i) => {
+        let osc = synth.createOscillator();
+        let gain = synth.createGain();
+        let start = t + i * gap;
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        if (slide) osc.frequency.exponentialRampToValueAtTime(freq * slide, start + 0.25);
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + (i == list.length - 1 ? 0.45 : 0.2));
+        osc.connect(gain).connect(synth.destination);
+        osc.start(start);
+        osc.stop(start + 0.55);
+      });
+    } catch (e) {}
+  }
+
+  const sounds = {
+    reveal: () => notes([392, 523, 659, 784, 1047], "triangle", 0.07),
+    right: () => notes([659, 784, 1047, 1319], "triangle", 0.08),
+    wrong: () => notes([330, 262], "sine", 0.16, 0.16),
+    boing: () => notes([220, 330], "sine", 0.12, 0.18, 2.2),
+  };
 
   function sparkles(list = ["✨", "🤩", "⭐", "💫"]) {
     for (let i = 0; i < 12; i++) {
       let s = document.createElement("span");
       s.className = "ajSpark";
       s.innerText = list[i % list.length];
-      s.style.left = 10 + Math.random() * 80 + "%";
-      s.style.animationDelay = Math.random() * 0.4 + "s";
+      s.style.left = 8 + Math.random() * 84 + "%";
+      s.style.animationDelay = Math.random() * 0.35 + "s";
       ajCard.appendChild(s);
       setTimeout(() => s.remove(), 1800);
     }
   }
 
-  function talk(text) {
-    return active ? speak(text) : Promise.resolve();
+  function talk(text, onSentence) {
+    return active ? speak(text, onSentence) : Promise.resolve();
   }
 
-  // ---------- telling a fact ----------
+  // ---------- one wonder ----------
 
-  async function tell(next, fromSaved = false) {
+  function shuffledOptions(f) {
+    let list = f.o.map((text, i) => ({ text, right: i == f.a }));
+    if (f.o == TRUE_FALSE || f.o == YES_NO) return list; // keep सच/झूठ and हाँ/नहीं in order
+    for (let i = list.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }
+
+  // the words Gappu reads for a choice (without the emoji)
+  function spoken(text) {
+    return text.replace(/[0-9#*]\u{FE0F}?\u{20E3}/gu, "").replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F1E6}-\u{1F1FF}]/gu, "").trim();
+  }
+
+  async function tell(next) {
     let id = ++factId;
     hush();
     fact = next;
-    counted = false;
+    answered = false;
     let topic = AJOOBA_TOPICS[fact.t];
+    let p = progress();
+    ajNumber.innerText = "अजूबा #" + (p.total + 1);
 
-    // the card: shimmer while the picture loads
+    // the card shows the photo straight away: it is a clue, not the answer
     ajCard.className = "loading";
     ajPhoto.removeAttribute("src");
     ajPhotoBg.removeAttribute("src");
     ajEmoji.innerText = fact.e;
     ajTopic.innerText = topic.emoji + " " + topic.name;
-    ajFact.innerText = "🔍 ...";
-    ajReact.classList.remove("ready");
+    ajResult.hidden = true;
+    ajActions.hidden = true;
+    ajOptions.hidden = false;
+    ajSay.classList.remove("fact");
     showCounters();
     gappu("excited");
 
-    let picture = pictureOf(fact.pic);
-    let intro = firstTime
-      ? "नमस्ते " + who().hindi + "! मैं गप्पू हूँ, अजूबे खोजने वाला हाथी! चलो, तुम्हें एक अजूबा सुनाता हूँ।"
-      : randomOf(TEASERS);
+    // the choices
+    shownOptions = shuffledOptions(fact);
+    ajOptions.innerHTML = "";
+    shownOptions.forEach((opt, i) => {
+      let b = document.createElement("button");
+      b.className = "ajOption";
+      b.innerText = opt.text;
+      b.onclick = () => {
+        buzz();
+        guess(i);
+      };
+      ajOptions.appendChild(b);
+    });
+    ajSay.innerText = fact.q;
+
+    pictureOf(fact.pic).then((url) => {
+      if (id != factId) return;
+      ajCard.className = (url ? "photo" : "emoji") + " pop";
+      if (url) ajPhoto.src = ajPhotoBg.src = url;
+    });
+
+    // Gappu asks: question, then every choice (each lights up while he reads it)
+    let opener = firstTime ? line("first") : line("ask");
     firstTime = false;
-    ajFact.innerText = intro;
-    await talk(intro);
-    let url = await picture;
+    let names = shownOptions.map((o) => spoken(o.text));
+    let reading = (opener ? opener + " " : "") + fact.q + " " + names.slice(0, -1).join("? ") + "? या " + names[names.length - 1] + "?";
+    let lead = (opener ? opener.split(/(?<=[।!?.])\s+/).length : 0) + fact.q.split(/(?<=[।!?.])\s+/).length;
+    let light = (i) => [...ajOptions.children].forEach((b, n) => b.classList.toggle("reading", n == i - lead));
+    await talk(reading, light);
+    light(-1);
+    if (id == factId && !answered) ajOptions.classList.add("waiting");
+  }
+
+  async function guess(i) {
+    if (answered || !active || !fact) return;
+    answered = true;
+    let id = ++factId;
+    hush();
+    ajOptions.classList.remove("waiting");
+    let chosen = shownOptions[i];
+    let buttons = [...ajOptions.children];
+    buttons.forEach((b, n) => {
+      b.classList.remove("reading");
+      b.disabled = true;
+      if (shownOptions[n].right) b.classList.add("right");
+    });
+    if (!chosen.right) buttons[i].classList.add("wrong");
+
+    // count it
+    let p = progress();
+    if (!p.seen.includes(fact.id)) p.seen.push(fact.id);
+    p.today++;
+    p.total++;
+    if (chosen.right) p.right++;
+    saveProgress(p);
+    showCounters();
+    bump(chosen.right ? ajRight : ajToday);
+
+    // the kid sees right / wrong on the buttons for a moment...
+    if (chosen.right) sounds.right();
+    else sounds.wrong();
+    await new Promise((r) => setTimeout(r, 900));
     if (id != factId || !active) return;
 
-    // the picture pops in (or the big emoji if there is no picture)
-    ajCard.className = url ? "photo pop" : "emoji pop";
-    if (url) ajPhoto.src = ajPhotoBg.src = url;
-    sparkles();
-    ajFact.innerText = fact.f;
+    // ...then the surprise: a ribbon on the photo, the fact in Gappu's bubble
+    let rightText = spoken(shownOptions.find((o) => o.right).text);
+    ajResult.className = chosen.right ? "right" : "wrong";
+    ajResult.innerText = (chosen.right ? "✅ सही जवाब: " : "💡 सही जवाब: ") + rightText;
+    ajResult.hidden = false;
+    ajOptions.hidden = true;
+    ajActions.hidden = false;
+    ajSay.innerText = fact.f;
+    ajSay.classList.add("fact");
+    ajCard.classList.remove("pop");
+    void ajCard.offsetWidth;
+    ajCard.classList.add("reveal");
 
-    // count it as learned, once per fact
-    if (!fromSaved) {
-      let p = progress();
-      if (!p.seen.includes(fact.id)) p.seen.push(fact.id);
-      p.today++;
-      p.total++;
-      saveProgress(p);
-      counted = true;
-      showCounters();
-      bump(ajToday);
+    if (chosen.right) {
+      sparkles(["⭐", "✨", "🎉", "💫"]);
+      gappu("wow");
+    } else {
+      gappu("sad");
     }
+    if (fact.fun) setTimeout(() => (sounds.boing(), gappu("giggle")), 700);
+    else setTimeout(sounds.reveal, 600);
 
-    await talk(fact.f);
+    let reaction = chosen.right ? line("right") : line("wrong");
+    if (fact.fun) reaction += " " + line("funny");
+    await talk(reaction + " " + fact.f);
     if (id != factId || !active) return;
-    ajReact.classList.add("ready");
 
     // daily goal reached
-    let p = progress();
-    if (counted && p.today == DAILY_GOAL) {
+    if (p.today == DAILY_GOAL) {
       tada();
       sparkles(["🌟", "🎉", "⭐", "🏆"]);
       gappu("wow");
-      await talk("शाबाश " + who().hindi + "! आज तुमने " + DAILY_GOAL + " अजूबे सीख लिए! तुम तो पक्के खोजी हो!");
-      if (id != factId || !active) return;
+      await talk("शाबाश " + who().hindi + "! आज तुमने " + DAILY_GOAL + " अजूबे खोज लिए! तुम तो पक्के खोजी हो!");
     }
-    await talk(randomOf(AFTER));
-    // get the next picture ready while the kid reacts
+    if (id == factId) $("ajNext").classList.add("ready");
+    // get the next picture ready while the kid reads
     pictureOf(nextFact().pic);
   }
 
-  function bump(el) {
-    el.classList.remove("bump");
-    void el.offsetWidth;
-    el.classList.add("bump");
-  }
+  // ---------- buttons ----------
 
-  ajNext.onclick = () => {
+  $("ajNext").onclick = () => {
     buzz();
+    $("ajNext").classList.remove("ready");
     tell(nextFact());
   };
 
-  // ---------- reactions ----------
+  $("ajAgain").onclick = () => {
+    buzz();
+    if (!fact) return;
+    factId++;
+    talk(fact.f);
+  };
 
-  for (let b of ajReact.querySelectorAll("button")) {
-    b.onclick = async () => {
-      buzz();
-      if (!fact) return;
-      factId++; // stop the rest of what Gappu was saying
-      hush();
-      let r = b.dataset.r;
-      if (r == "wow") {
-        gappu("wow");
-        sparkles(["😲", "🤯", "✨", "⭐"]);
-        await talk(randomOf(WOW));
-      } else if (r == "haha") {
-        gappu("giggle");
-        sparkles(["😂", "🤣", "😄", "✨"]);
-        await talk(randomOf(HAHA));
-      } else if (r == "save") {
-        let p = progress();
-        if (p.saved.includes(fact.id)) {
-          p.saved = p.saved.filter((x) => x != fact.id);
-          saveProgress(p);
-          showCounters();
-          return;
-        }
-        p.saved.push(fact.id);
-        saveProgress(p);
-        showCounters();
-        bump($("ajSavedBtn"));
-        gappu("wow");
-        sparkles(["⭐", "🌟", "✨", "💛"]);
-        await talk("यह अजूबा तुम्हारी लिस्ट में सेव हो गया!");
-      }
-    };
-  }
+  $("ajWow").onclick = async () => {
+    buzz();
+    factId++;
+    gappu(fact && fact.fun ? "giggle" : "wow");
+    sparkles(fact && fact.fun ? ["😂", "🤣", "😄", "✨"] : ["😲", "🤯", "✨", "⭐"]);
+    await talk(line(fact && fact.fun ? "giggle" : "wow"));
+  };
 
-  // ---------- my saved facts ----------
+  $("ajSave").onclick = async () => {
+    buzz();
+    if (!fact) return;
+    let p = progress();
+    if (p.saved.includes(fact.id)) {
+      p.saved = p.saved.filter((x) => x != fact.id);
+      saveProgress(p);
+      return showCounters();
+    }
+    p.saved.push(fact.id);
+    saveProgress(p);
+    showCounters();
+    bump($("ajSavedBtn"));
+    sparkles(["⭐", "🌟", "✨", "💛"]);
+    factId++;
+    await talk(line("saved"));
+  };
+
+  // tap the photo to see it big
+  ajCard.onclick = () => {
+    if (!ajCard.classList.contains("photo")) return;
+    ajZoom.querySelector("img").src = ajPhoto.src;
+    ajZoom.hidden = false;
+  };
+  ajZoom.onclick = () => (ajZoom.hidden = true);
+
+  // ---------- my saved wonders ----------
 
   $("ajSavedBtn").onclick = () => {
     buzz();
@@ -266,7 +397,7 @@
     let saved = AJOOBA.filter((f) => p.saved.includes(f.id));
     ajSavedList.innerHTML = "";
     if (!saved.length) {
-      ajSavedList.innerHTML = '<p class="ajEmpty">अभी कोई अजूबा सेव नहीं है। किसी अजूबे पर ⭐ दबाओ!</p>';
+      ajSavedList.innerHTML = '<p class="ajEmpty">अभी कोई अजूबा सेव नहीं है। जवाब के बाद ⭐ दबाओ!</p>';
     }
     for (let f of saved) {
       let item = document.createElement("button");
@@ -276,8 +407,8 @@
       item.lastChild.innerText = f.f;
       item.onclick = () => {
         buzz();
-        ajSaved.hidden = true;
-        tell(f, true);
+        factId++;
+        talk(f.f);
       };
       ajSavedList.appendChild(item);
     }
@@ -289,10 +420,9 @@
     ajSaved.hidden = true;
   };
 
-  // say "और" / "next" to hear another one
+  // voice: say "और" / "next" for another wonder
   function heard(text) {
-    if (/और|aur|next|agla|अगला|another|more|फिर/i.test(text)) return tell(nextFact());
-    if (/वाह|wow|waah/i.test(text)) return ajReact.querySelector('[data-r="wow"]').click();
+    if (/और|aur|next|agla|अगला|another|more/i.test(text)) return $("ajNext").click();
   }
 
   // ---------- joining the app's modes ----------
@@ -306,6 +436,7 @@
       active = true;
       firstTime = true;
       ajSaved.hidden = true;
+      ajZoom.hidden = true;
       tell(nextFact());
     },
     leave() {
