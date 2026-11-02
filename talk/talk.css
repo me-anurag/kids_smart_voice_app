@@ -274,6 +274,11 @@ body.mode-talk #bottom {
 }
 
 /* whose turn: red = Bolo is talking, wait; green = your turn, speak (rings with your voice) */
+/* Bolo has finished: the red button bounces gently, "press me and speak" */
+#talkBox[data-state="idle"] #tMic {
+  animation: pop 1.4s ease-in-out infinite;
+}
+
 #talkBox[data-state="listening"] #tMicLabel {
   color: #c8ffd0;
   animation: pop 1s ease-in-out infinite;

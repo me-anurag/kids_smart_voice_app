@@ -2,7 +2,7 @@
 // Listening: Groq Whisper, Bolo's replies: Groq chat, both through netlify/functions/talk.
 // Bolo's voice is the phone's Hindi voice.
 //
-// Turns: Bolo speaks (red mic) -> kid's turn (green mic) -> thinking (red) -> Bolo speaks ...
+// Turns: Bolo speaks (red mic) -> kid presses the mic and speaks (green) -> thinking (red) -> ...
 // The mic is only switched on while listening: on Android an open mic makes speech very quiet.
 
 (function () {
@@ -76,7 +76,7 @@
   // ---------- whose turn is it? ----------
 
   const LABELS = {
-    idle: "दबाओ और बोलो!",
+    idle: "दबाओ और बोलो! 👇",
     speaking: "सुनो... 🔊",
     listening: "अब तुम बोलो! 👂",
     thinking: "सोच रहा हूँ... 🤔",
@@ -217,14 +217,11 @@
     if (id == turnId && reply.listen) listenSoon();
   }
 
-  // after Bolo asks something, the mic opens by itself (after a short pause, so it doesn't hear Bolo)
+  // the kid presses the button to speak: after Bolo finishes, the button invites them
   let listenTimer = null;
 
   function listenSoon() {
-    clearTimeout(listenTimer);
-    listenTimer = setTimeout(() => {
-      if (active && state == "idle") startRecording(true);
-    }, 450);
+    if (active && state == "idle") tMicLabel.innerText = "दबाओ और बोलो! 👇";
   }
 
   // ---------- menu: what shall we do? ----------
