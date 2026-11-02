@@ -20,6 +20,11 @@
   const tMicLabel = $("tMicLabel");
   const tStars = $("tStars");
   const tTip = $("tTip");
+  const tStoryBar = $("tStoryBar");
+  const tStoryTitle = $("tStoryTitle");
+  const tStoryDots = $("tStoryDots");
+  const tStories = $("tStories");
+  const tStoriesList = $("tStoriesList");
 
   let game = null;
   let history = [];
@@ -170,6 +175,8 @@
       b.innerText = text;
       b.onclick = () => {
         buzz();
+        if (game == "story" && storyDone && /नई कहानी/.test(text)) return startGame("story");
+        if (game == "story" && storyDone && /बस/.test(text)) return goHome();
         turn(text);
       };
       tOptions.appendChild(b);
@@ -252,6 +259,7 @@
       tada();
     }
 
+    if (game == "story") storyStep(reply);
     setMood(reply.mood);
     showOptions(reply.options || []);
     let saying = sayIt(reply.say);
@@ -267,6 +275,76 @@
     if (active && state == "idle") tMicLabel.innerText = "दबाओ और बोलो! 👇";
   }
 
+  // ---------- Story: title, chapters, the end, and "my stories" ----------
+
+  let storyLog = []; // the story so far, to save at the end
+  let storyTitle = "";
+  let storyDone = false;
+
+  function showStoryBar(part) {
+    tStoryTitle.innerText = "📖 " + (storyTitle || "नई कहानी");
+    [...tStoryDots.children].forEach((d, i) => {
+      d.className = i < part ? "done" : i == part ? "now" : "";
+    });
+  }
+
+  function storyStep(reply) {
+    if (reply.title) storyTitle = reply.title;
+    if (reply.part >= 1) storyLog.push(reply.say);
+    showStoryBar(reply.part || 0);
+    if (reply.the_end && !storyDone) {
+      storyDone = true;
+      showStoryBar(6);
+      tada();
+      endConfetti();
+      let stories = store("stories", []);
+      stories.unshift({ title: storyTitle || "मेरी कहानी", day: new Date().toISOString().slice(0, 10), text: storyLog.join("\n\n") });
+      keep("stories", stories.slice(0, 20));
+    }
+  }
+
+  function endConfetti() {
+    let colors = ["#ffd60a", "#ff5fd2", "#2ec5ff", "#7bed3f", "#ff9f1a", "#9b5cff"];
+    for (let i = 0; i < 50; i++) {
+      let c = document.createElement("i");
+      c.className = "tConfetti";
+      c.style.left = Math.random() * 100 + "%";
+      c.style.background = colors[i % colors.length];
+      c.style.animationDelay = Math.random() * 0.5 + "s";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+
+  $("tStoriesBtn").onclick = () => {
+    buzz();
+    let stories = store("stories", []);
+    tStoriesList.innerHTML = "";
+    if (!stories.length) tStoriesList.innerHTML = '<p class="tEmpty">अभी कोई कहानी नहीं है। चलो, एक बनाते हैं! 📖</p>';
+    for (let st of stories) {
+      let item = document.createElement("button");
+      item.className = "tStoryItem";
+      item.innerHTML = "<b></b><span></span>";
+      item.firstChild.innerText = "📖 " + st.title;
+      item.lastChild.innerText = st.text.slice(0, 90) + "...";
+      item.onclick = () => {
+        buzz();
+        tStories.hidden = true;
+        turnId++;
+        stopRecording(false);
+        addMsg("bolo", "📖 " + st.title + "\n\n" + st.text, "storyPage");
+        sayIt(st.title + "। " + st.text, true);
+      };
+      tStoriesList.appendChild(item);
+    }
+    tStories.hidden = false;
+  };
+
+  $("tStoriesClose").onclick = () => {
+    buzz();
+    tStories.hidden = true;
+  };
+
   // ---------- starting: Talk opens straight into a chat, Story straight into a story ----------
   // (rhymes "rhyme" and riddles "riddle" also work on the server; they are kept for later)
 
@@ -275,6 +353,12 @@
     hush();
     game = name;
     history = [];
+    storyLog = [];
+    storyTitle = "";
+    storyDone = false;
+    tStoryBar.hidden = name != "story";
+    tStories.hidden = true;
+    showStoryBar(0);
     tChat.innerHTML = "";
     liveMsg = null;
     typing = null;

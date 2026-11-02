@@ -448,3 +448,185 @@ body.mode-talk #bottom {
   font-size: 17px;
   padding: 8px 16px;
 }
+
+
+/* ---------- Story: a storybook ---------- */
+
+body.mode-story {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 230, 150, 0.25), transparent 40%),
+    linear-gradient(165deg, #2a1a6e 0%, #5b2bb8 50%, #c2397a 100%);
+}
+
+#tStoriesBtn {
+  display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #ffd60a;
+  box-shadow: 0 3px 0 #c99500;
+  font-size: 20px;
+}
+
+body.mode-story #tStoriesBtn {
+  display: block;
+}
+
+#tStoryBar {
+  width: 100%;
+  margin: -2px 0 8px;
+  padding: 7px 12px;
+  border-radius: 16px;
+  background: #fff3d6;
+  color: #6b3a10;
+  box-shadow: 0 4px 0 rgba(60, 20, 0, 0.25);
+}
+
+#tStoryBar[hidden] {
+  display: none;
+}
+
+#tStoryTitle {
+  display: block;
+  font-size: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tStoryDots {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+#tStoryDots i {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #e8d3a8;
+  transition: background 0.4s;
+}
+
+#tStoryDots i.done { background: #ff9f1a; }
+#tStoryDots i.now { background: #ffd60a; animation: pop 1.2s ease-in-out infinite; }
+
+/* Bolo's lines are pages of the storybook */
+body.mode-story .tMsg.bolo {
+  background: linear-gradient(180deg, #fffaf0, #fff0d4);
+  color: #4a2a0a;
+  border: 2px solid #e8c88a;
+  border-radius: 6px 18px 18px 6px;
+  box-shadow: inset 6px 0 0 #f0d9a8, 0 4px 0 rgba(60, 20, 0, 0.25);
+  font-size: 17px;
+}
+
+body.mode-story .tMsg.kid::before {
+  content: "💡 तुम्हारा आइडिया";
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.7;
+}
+
+body.mode-story .tMsg.kid.live::before {
+  content: "";
+  display: none;
+}
+
+.tMsg.storyPage {
+  max-width: 94%;
+}
+
+/* story choices look like big cards */
+body.mode-story .tOption {
+  background: #fff3d6;
+  color: #6b3a10;
+  border: 2px solid #e8c88a;
+  box-shadow: 0 4px 0 rgba(60, 20, 0, 0.3);
+}
+
+.tConfetti {
+  position: fixed;
+  top: -20px;
+  z-index: 50;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: fall 2.2s ease-in forwards;
+  --drift: 0px;
+  --spin: 400deg;
+}
+
+/* my stories */
+#tStories {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #fffaf0, #ffe8c8);
+  color: #4a2a0a;
+  box-shadow: 0 10px 30px rgba(40, 0, 60, 0.4);
+  animation: bounceIn 0.4s ease;
+}
+
+#tStories[hidden] {
+  display: none;
+}
+
+#tStoriesHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 22px;
+}
+
+#tStoriesClose {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ff4f6d;
+  color: #fff;
+  font-size: 18px;
+}
+
+#tStoriesList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tStoryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  color: #4a2a0a;
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.4;
+  box-shadow: 0 3px 0 rgba(60, 20, 0, 0.15);
+}
+
+.tStoryItem b {
+  font-size: 17px;
+}
+
+.tEmpty {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+#talkView {
+  position: relative;
+}

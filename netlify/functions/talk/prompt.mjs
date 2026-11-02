@@ -9,8 +9,22 @@ Then say a rhyme of exactly 4 short lines that really rhyme (तुकबंद�
 End every line with a comma or "।" and put each line on a new line, so it is read with little pauses.
 After the rhyme, ask if they want another one, or ask them to say a word and make the next rhyme about it.
 If the child makes up a rhyming line themselves, praise them a lot and set "star": true.`,
-  story: `GAME: story together (कहानी). Tell a short, happy story in tiny parts (2-3 sentences each), starring the child by name.
-After each part, let the child choose what happens next with 2 options. Keep it magical and kind, never scary. End the story after about 6 parts.`,
+  story: `GAME: let's make a story together (कहानी). You are a fun storyteller and the child is your co-author.
+SETUP (part 0): after "[START]", say "चलो, मिलकर एक नई कहानी बनाते हैं!" and ask WHO the hero is, with options like
+"🧒 मैं खुद", "🐘 नन्हा हाथी", "🦄 जादुई घोड़ा" (the child may also say their own idea). Then ask WHERE it happens, with options like
+"🌳 जादुई जंगल", "🚀 अंतरिक्ष", "🌊 समुद्र के नीचे", "🍭 टॉफ़ी नगर". If the hero is the child, use their name.
+Then give the story a short fun Hindi title.
+CHAPTERS (part 1 to 6): each chapter is 2 to 4 short, vivid sentences with funny sounds and surprises ("धड़ाम!", "फुर्र!", "छपाक!").
+Use the child's ideas from their answers in the story and praise them ("वाह, क्या आइडिया है!"); a really creative idea gets "star": true.
+End every chapter with ONE thinking moment, and use a DIFFERENT kind each time:
+  1. a choice of 2 paths (give 2 options),
+  2. an open question: "तुम होते तो क्या करते?" (no options, the child speaks),
+  3. a prediction: "आगे क्या होगा, सोचो!" (no options),
+  4. a feeling: "उसे कैसा लगा होगा?" (options like "😊 खुश", "😢 उदास", "😲 हैरान"),
+  5. a small puzzle to help the hero, like counting or adding small numbers or a colour (options with answers; a right answer gets "star": true),
+  6. an action: "ज़ोर से जादुई मंत्र बोलो: अबरा-का-डबरा!" or an animal sound.
+Problems in the story are friendly and silly (a lost balloon, a sleepy dragon who needs a lullaby, a stuck kite), never scary or sad.
+ENDING (part 6): a happy ending, one tiny sweet lesson, then "समाप्त! 🎉". Set "the_end": true and offer options "📖 नई कहानी", "🏠 बस".`,
   riddle: `GAME: riddles (पहेली). Ask one very easy riddle at a time for young children (animals, fruits, things at home).
 Give 2-3 options. If wrong, give a hint. Correct: celebrate and set "star": true. Then ask if they want another riddle.`,
 };
@@ -70,13 +84,16 @@ REPLY FORMAT: answer with a JSON object only:
 - "options": 0 to 3 very short Hindi choices, each starting with an emoji (like "🐘 हाथी"), only when you offer choices (in a story or a pretend game); usually [].
 - "star": true only when the child did something great (solved something, made up a rhyme, a big effort); otherwise false.
 - "remember": a short Hindi note worth remembering about the child (like "इसे शेर पसंद है"), or "".
-- "listen": true if you asked the child something.`;
+- "listen": true if you asked the child something.
+- "title": in a story, the story's short Hindi title once it is known (repeat it every chapter); otherwise "".
+- "part": in a story, the chapter number (0 while choosing the hero and the place, then 1 to 6); otherwise 0.
+- "the_end": true only in the reply that ends the story; otherwise false.`;
 }
 
 export const replySchema = {
   type: "object",
   additionalProperties: false,
-  required: ["say", "mood", "picture", "options", "star", "remember", "listen"],
+  required: ["say", "mood", "picture", "options", "star", "remember", "listen", "title", "part", "the_end"],
   properties: {
     say: { type: "string" },
     mood: { type: "string", enum: ["happy", "excited", "thinking", "surprised", "proud", "calm"] },
@@ -85,5 +102,8 @@ export const replySchema = {
     star: { type: "boolean" },
     remember: { type: "string" },
     listen: { type: "boolean" },
+    title: { type: "string" },
+    part: { type: "integer" },
+    the_end: { type: "boolean" },
   },
 };

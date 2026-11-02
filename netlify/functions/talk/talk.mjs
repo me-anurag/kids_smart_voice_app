@@ -220,5 +220,8 @@ function tidy(r) {
     star: r.star === true,
     remember: String(r.remember || "").trim().slice(0, 80),
     listen: r.listen !== false,
+    title: String(r.title || "").trim().slice(0, 60),
+    part: Math.max(0, Math.min(6, parseInt(r.part, 10) || 0)),
+    the_end: r.the_end === true,
   };
 }

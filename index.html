@@ -123,7 +123,12 @@
       <div id="tHead">
         <img id="tMascot" class="tMascot happy talker" src="icons/mascot.png" alt="">
         <div id="tWho"><b>Bolo</b><span id="tStatus">ऑनलाइन 🟢</span></div>
+        <button id="tStoriesBtn" aria-label="मेरी कहानियाँ">📚</button>
         <span id="tStars">⭐ 0</span>
+      </div>
+      <div id="tStoryBar" hidden>
+        <b id="tStoryTitle">📖 नई कहानी</b>
+        <div id="tStoryDots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       </div>
       <div id="tChat"></div>
       <p id="tTip" hidden>🔈 This phone has no Hindi voice. Grown-ups: Settings → Text-to-speech → Google → Install voice data → Hindi.</p>
@@ -136,6 +141,10 @@
         </div>
         <button id="tStop" aria-label="बस">🛑</button>
       </div>
+    </div>
+    <div id="tStories" hidden>
+      <div id="tStoriesHead"><b>📚 मेरी कहानियाँ</b><button id="tStoriesClose" aria-label="Close">✖</button></div>
+      <div id="tStoriesList"></div>
     </div>
   </section>
 

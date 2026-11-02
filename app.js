@@ -137,7 +137,7 @@ function speak(words, onSentence) {
       voice.lang = hindi ? "hi-IN" : "en-IN";
       let chosen = hindi ? hindiVoice : englishVoice;
       if (chosen) voice.voice = chosen;
-      voice.rate = 0.9;
+      voice.rate = mode == "story" ? 0.85 : 0.9; // stories are read a little slower
       voice.pitch = mode == "ajooba" ? 1.25 : 1.15; // Gappu: a little higher than Bolo, still clear
       let began = false;
       let i = index;
