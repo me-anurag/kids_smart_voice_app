@@ -503,9 +503,10 @@ async function toDevanagari(word) {
   }
 }
 
-// what a page is about, from its Wikipedia short description
-const KID_THING = /\b(species|animals?|cats?|dogs?|horses?|cows?|domesticated|carnivor|herbivor|mammals?|birds?|fish|reptiles?|amphibians?|insects?|spiders?|plants?|trees?|flowers?|fruits?|vegetables?|food|dish|drinks?|beverage|sweets?|dessert|vehicles?|aircraft|cars?|ships?|boats?|trains?|machines?|tools?|devices?|instruments?|objects?|containers?|furniture|toys?|games?|sports?|planets?|stars?|moon|natural satellite|galaxy|weather|river|mountain|lake|ocean|sea|island|desert|forest|monument|building|temple|fort|city|country|capital|colou?r|shape|festival|dinosaurs?|genus|family of|clothing|garment|utensil|household|kitchen)/i;
-const NOT_KID_THING = /\b(company|corporation|manufacturer|brand|businesses?|film|movie|album|songs?|single|band|singer|musician|rapper|actor|actress|politician|footballer|cricketer|player|athlete|novel|book|magazine|newspaper|journal|television|tv|series|episode|video game|software|website|organi[sz]ation|political party|surname|given name|family name|village|municipality|tehsil|census|topics referred|library|record label|journalist|businessman|writer|poet|author|director|producer|character)\b/i;
+// what a page is about, from its Wikipedia short description.
+// Cities and towns are neutral: their names often sound like Hindi words (Nadi, a town in Fiji = नदी, river).
+const KID_THING = /\b(species|animals?|cats?|dogs?|horses?|cows?|domesticated|carnivor|herbivor|mammals?|birds?|fish|reptiles?|amphibians?|insects?|spiders?|plants?|trees?|flowers?|fruits?|vegetables?|food|dish|drinks?|beverage|sweets?|dessert|vehicles?|aircraft|cars?|ships?|boats?|trains?|machines?|tools?|devices?|instruments?|objects?|containers?|furniture|toys?|games?|sports?|planets?|stars?|moon|natural satellite|galaxy|weather|river|mountain|lake|ocean|sea|desert|forest|monument|building|temple|fort|colou?r|shape|festival|dinosaurs?|genus|family of|clothing|garment|utensil|household|kitchen)/i;
+const NOT_KID_THING = /\b(company|restaurant|chain|franchise|retailer|supermarket|store|airline|bank|town|suburb|neighbourhood|corporation|manufacturer|brand|businesses?|film|movie|album|songs?|single|band|singer|musician|rapper|actor|actress|politician|footballer|cricketer|player|athlete|novel|book|magazine|newspaper|journal|television|tv|series|episode|video game|software|website|organi[sz]ation|political party|surname|given name|family name|village|municipality|tehsil|census|topics referred|library|record label|journalist|businessman|writer|poet|author|director|producer|character)\b/i;
 
 function meaningScore(description) {
   if (!description) return 0;
@@ -569,14 +570,62 @@ async function findTopic(name) {
   }
 
   let best = null;
+  let second = -Infinity;
   for (let t of topics.values()) {
     let description = (t.en && t.en.description) || (t.hi && t.hi.description);
-    t.score += meaningScore(description);
+    t.meaning = meaningScore(description);
+    t.score += t.meaning;
     if (t.en && t.en.langlinks) t.score += 1.5; // everyday things usually have a Hindi page too
     if (isBlocked(t.en && t.en.title) || isBlocked(t.hi && t.hi.title) || isBlocked(description)) continue;
-    if (!best || t.score > best.score) best = t;
+    if (!best || t.score > best.score) {
+      if (best) second = Math.max(second, best.score);
+      best = t;
+    } else {
+      second = Math.max(second, t.score);
+    }
   }
+  if (best) best.margin = best.score - second;
   return best;
+}
+
+// Is the search sure what the kid meant? Clearly a kid thing (animal, food, place...),
+// a good score and well ahead of other meanings, and said in English.
+function clearTopic(topic, said) {
+  return !!topic && !/[ऀ-ॿ]/.test(said) && topic.meaning > 0 && topic.score >= 6 && topic.margin >= 2;
+}
+
+// When it is not sure ("nadi" = a town in Fiji or a river? "burger" = Burger King?),
+// ask the AI what a child most likely wants to see. Only used then, answers remembered.
+const GUIDE_LIMIT = 150; // AI questions per phone per day
+const guideCache = new Map();
+
+async function aiGuide(said, others) {
+  let key = cleanText(said);
+  if (guideCache.has(key)) return guideCache.get(key);
+  let day = new Date().toISOString().slice(0, 10);
+  let used = { day, n: 0 };
+  try {
+    used = JSON.parse(localStorage.getItem("guide-used")) || used;
+  } catch (e) {}
+  if (used.day != day) used = { day, n: 0 };
+  if (used.n >= GUIDE_LIMIT) return null;
+  try {
+    let res = await fetch("/.netlify/functions/talk", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "guide", said, others }),
+    });
+    used.n++;
+    try {
+      localStorage.setItem("guide-used", JSON.stringify(used));
+    } catch (e) {}
+    if (!res.ok) return null;
+    let answer = await res.json();
+    guideCache.set(key, answer);
+    return answer;
+  } catch (e) {
+    return null;
+  }
 }
 
 function shortHindi(extract) {
@@ -872,6 +921,20 @@ async function showPicture(name, otherGuesses = []) {
   try {
     let topic = await findTopicFor([name, ...otherGuesses]);
     if (id != searchId) return;
+    if (!clearTopic(topic, name)) {
+      let guide = await aiGuide(name, otherGuesses);
+      if (id != searchId) return;
+      if (guide && guide.safe === false) {
+        showEmpty();
+        safeReply();
+        return;
+      }
+      if (guide && guide.title && !isBlocked(guide.title)) {
+        let page = goodPages(await wiki("en", { titles: guide.title, ...englishInfo }))[0];
+        if (id != searchId) return;
+        if (page && !isBlocked(page.title) && !isBlocked(page.description)) topic = { en: page, hi: null };
+      }
+    }
     let english = topic && topic.en;
     let hindi = topic && topic.hi;
 

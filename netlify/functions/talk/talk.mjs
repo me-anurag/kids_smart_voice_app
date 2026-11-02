@@ -3,6 +3,7 @@
 //
 // Netlify environment variables (Site configuration -> Environment variables):
 //   GROQ_API_KEY_1, GROQ_API_KEY_2   your two free Groq keys (key 2 is the fallback)
+//   GROQ_API_KEY_3   for Pictures only: helps when a word is unclear (keys 1 and 2 are its backup)
 //   GROQ_MODELS      optional, comma-separated chat models to try in order
 //   GROQ_STT_MODELS  optional, comma-separated speech-to-text models to try in order
 
@@ -10,6 +11,7 @@ import { systemPrompt, replySchema } from "./prompt.mjs";
 
 const API = "https://api.groq.com/openai/v1";
 const KEYS = [process.env.GROQ_API_KEY_1, process.env.GROQ_API_KEY_2].filter(Boolean);
+const GUIDE_KEYS = [process.env.GROQ_API_KEY_3, ...KEYS].filter(Boolean);
 // Llama 3.3 first: it is trained for Hindi and writes much better Hindi than gpt-oss
 const MODELS = (process.env.GROQ_MODELS || "llama-3.3-70b-versatile,openai/gpt-oss-120b")
   .split(",").map((m) => m.trim()).filter(Boolean);
@@ -23,7 +25,7 @@ const GAMES = ["chat", "rhyme", "story", "riddle"];
 export default async (req) => {
   if (req.method != "POST") return json({ error: "post-only" }, 405);
   if (!sameSite(req)) return json({ error: "forbidden" }, 403);
-  if (!KEYS.length) return json({ error: "no-keys" }, 503);
+  if (!GUIDE_KEYS.length) return json({ error: "no-keys" }, 503);
 
   let body;
   try {
@@ -31,8 +33,9 @@ export default async (req) => {
   } catch (e) {
     return json({ error: "bad-request" }, 400);
   }
-  if (body.action == "hear") return hear(body);
-  if (body.action == "chat") return chat(body);
+  if (body.action == "hear") return KEYS.length ? hear(body) : json({ error: "no-keys" }, 503);
+  if (body.action == "chat") return KEYS.length ? chat(body) : json({ error: "no-keys" }, 503);
+  if (body.action == "guide") return guide(body);
   return json({ error: "bad-request" }, 400);
 };
 
@@ -50,9 +53,9 @@ function json(data, status = 200) {
 }
 
 // key 1 first; on limits or errors try key 2
-async function withKeys(send) {
+async function withKeys(send, keys = KEYS) {
   let last = null;
-  for (let key of KEYS) {
+  for (let key of keys) {
     let res = await send(key).catch(() => null);
     if (res && res.ok) return { res };
     last = res;
@@ -92,6 +95,58 @@ async function hear({ audio, mime, kid }) {
     return json({ text });
   }
   return answered ? json({ text: "" }) : json({ error: "busy" }, 503);
+}
+
+// ---------- Pictures: what does the child want to see? ----------
+// Only called when the normal search is unsure ("nadi" = a town in Fiji or a river?).
+
+const GUIDE_PROMPT = `You help a picture app for young children in India.
+A child said a word or a few words to see a picture. It comes from speech recognition, so it may be English,
+Hindi in Devanagari, or Hindi written in English letters (like "nadi" = नदी = river, "billi" = cat, "kela" = banana),
+and may have small spelling mistakes.
+Decide what the child most likely wants to SEE a picture of. Always prefer the simple, everyday meaning a child means:
+a river, not a town with that name; a food, not a restaurant chain or brand ("burger" = Hamburger, not Burger King);
+an animal or object, not a film, song, company, sports team or person with that name.
+Answer with a JSON object only:
+{"title": "the exact English Wikipedia article title of that thing, like River, Hamburger, Elephant, Taj Mahal",
+ "hindi": "its Hindi name in Devanagari",
+ "safe": true or false}
+"safe" is false if the words are about sexual things, private body parts, violence, weapons, drugs, alcohol, horror,
+or anything else not right for small children. If you cannot tell what it is, use "title": "".`;
+
+async function guide(body) {
+  let said = String(body.said || "").trim().slice(0, 100);
+  let others = (Array.isArray(body.others) ? body.others : []).filter((x) => typeof x == "string").slice(0, 2).map((x) => x.slice(0, 100));
+  if (!said) return json({ error: "bad-request" }, 400);
+  let ask = `The child said: "${said}"` + (others.length ? `
+The microphone also heard: ${others.map((o) => `"${o}"`).join(", ")}` : "");
+
+  for (let model of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
+    let { res } = await withKeys(
+      (key) =>
+        fetch(API + "/chat/completions", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + key, "content-type": "application/json" },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "system", content: GUIDE_PROMPT }, { role: "user", content: ask }],
+            temperature: 0,
+            max_completion_tokens: 120,
+            response_format: { type: "json_object" },
+          }),
+        }),
+      GUIDE_KEYS
+    );
+    if (!res || !res.ok) continue;
+    try {
+      let data = await res.json();
+      let answer = JSON.parse(data.choices[0].message.content);
+      let title = String(answer.title || "").trim().slice(0, 80);
+      if (title && !/^[\p{L}\p{N} ,.'()&-]+$/u.test(title)) title = "";
+      return json({ title, hindi: String(answer.hindi || "").trim().slice(0, 60), safe: answer.safe !== false });
+    } catch (e) {}
+  }
+  return json({ error: "busy" }, 503);
 }
 
 // ---------- Bolo's reply (Groq chat) ----------
