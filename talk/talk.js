@@ -2,7 +2,7 @@
 // Listening: Groq Whisper, Bolo's replies: Groq chat, both through netlify/functions/talk.
 // Bolo's voice is the phone's Hindi voice.
 //
-// Turns: Bolo speaks (🔊) -> kid's turn, mic open (🎤) -> thinking (⏳) -> Bolo speaks ...
+// Turns: Bolo speaks (red mic) -> kid's turn (green mic) -> thinking (red) -> Bolo speaks ...
 // The mic is only switched on while listening: on Android an open mic makes speech very quiet.
 
 (function () {
@@ -81,12 +81,10 @@
     listening: "अब तुम बोलो! 👂",
     thinking: "सोच रहा हूँ... 🤔",
   };
-  const ICONS = { idle: "🎤", speaking: "🔊", listening: "🎤", thinking: "⏳" };
 
   function setState(next) {
     state = next;
     tBox.dataset.state = next;
-    tMic.innerText = ICONS[next];
     tMicLabel.innerText = LABELS[next];
     tMic.classList.toggle("listening", next == "listening");
   }
