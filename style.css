@@ -1171,15 +1171,15 @@ body.mode-home #bottom {
   text-shadow: 0 2px 0 #1a4aa8;
 }
 
-/* the Talk tile shows its picture bigger */
-.homeTile .tileEmoji.talkIcon {
+/* Talk and Story show their picture icons bigger */
+.homeTile .tileEmoji.picIcon {
   width: 64px;
   height: 64px;
   padding: 0;
   background: none;
 }
 
-.homeTile .tileEmoji.talkIcon img {
+.homeTile .tileEmoji.picIcon img {
   width: 64px;
   height: 64px;
   border-radius: 16px;

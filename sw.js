@@ -32,6 +32,7 @@ const FILES = [
   "icons/gappu.png",
   "icons/gappu-small.png",
   "icons/talk.png",
+  "icons/story.png",
   "sounds/bee.mp3",
   "sounds/cat.mp3",
   "sounds/cow.mp3",
