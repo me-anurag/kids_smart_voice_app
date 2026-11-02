@@ -168,7 +168,7 @@ async function chat(body) {
   let memory = cleanList(body.memory, 8, 80);
   let history = (Array.isArray(body.history) ? body.history : [])
     .filter((m) => m && (m.role == "kid" || m.role == "bolo") && typeof m.text == "string")
-    .slice(-12)
+    .slice(-20) // the last 10 exchanges
     .map((m) => ({ role: m.role == "kid" ? "user" : "assistant", content: m.text.slice(0, 500) }));
   if (!history.length || history[history.length - 1].role != "user") return json({ error: "bad-request" }, 400);
 

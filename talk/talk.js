@@ -191,7 +191,107 @@
     }
   }
 
-  async function turn(text) {
+  // ---------- memory: the last 10 exchanges; repeats today are caught here, without the AI ----------
+
+  const KEEP = 20; // messages = the last 10 exchanges (kid + Bolo)
+  const STOP = new Set(("मैं मुझे मेरा मेरी मेरे है हैं था थी थे का की के को में से और भी तो क्या कैसे क्यों कब कहाँ " +
+    "यह वह ये वो एक ना नहीं हाँ हां बोलो बताओ बताओ तुम तुम्हें तुम्हारा आज बहुत कि पर ही गया गई देखा पसंद अच्छा " +
+    "होता होती होते कर करो करता लगता लगती सकता i is the a an my me you what why how do does it").split(" "));
+  let pendingOffer = null; // Bolo offered "shall I tell you something fun about ...?"
+
+  function words(text) {
+    return cleanText(text).split(/[^\p{L}\p{M}\p{N}]+/u).filter((w) => w.length >= 2 && !STOP.has(w));
+  }
+
+  function same(a, b) {
+    a = cleanText(a).replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
+    b = cleanText(b).replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
+    if (a.length < 4 || b.length < 4) return false;
+    return 1 - editDistance(a, b) / Math.max(a.length, b.length) >= 0.85;
+  }
+
+  // what the kid said today (repeats only count within the same day)
+  function saidToday() {
+    let day = new Date().toISOString().slice(0, 10);
+    let said = store("said", { day, list: [] });
+    return said.day == day ? said : { day, list: [] };
+  }
+
+  function rememberSaid(text) {
+    let said = saidToday();
+    said.list = [...said.list, text].slice(-100);
+    keep("said", said);
+  }
+
+  // a fun fact about what the kid keeps talking about: from Ajooba's checked facts when one fits
+  function factAbout(text) {
+    let mine = words(text);
+    let best = null;
+    for (let f of typeof AJOOBA != "undefined" ? AJOOBA : []) {
+      let theirs = new Set(words(f.q + " " + f.f));
+      let hit = mine.filter((w) => theirs.has(w));
+      if (hit.length && (!best || hit.length > best.hit.length)) best = { fact: f, hit };
+    }
+    let topic = best ? best.hit.sort((a, b) => b.length - a.length)[0] : mine.sort((a, b) => b.length - a.length)[0];
+    // say the word the way the kid's text wrote it (with its dots, like चिड़ियाघर)
+    let original = text.split(/[^\p{L}\p{M}\p{N}]+/u).find((w) => cleanText(w) == topic);
+    return { fact: best && best.fact, topic: original || topic || "" };
+  }
+
+  function showKidText(text) {
+    if (liveMsg) {
+      liveMsg.innerText = text;
+      liveMsg.classList.remove("live");
+      liveMsg = null;
+    } else if (text != "[START]") {
+      addMsg("kid", text);
+    }
+  }
+
+  // a short exchange handled right here (no AI call), kept in the memory too
+  async function localReply(kidText, say, options = [], mood = "happy") {
+    showKidText(kidText);
+    history.push({ role: "kid", text: kidText }, { role: "bolo", text: say });
+    history = history.slice(-KEEP);
+    let id = ++turnId;
+    setMood(mood, say);
+    showOptions(options);
+    await sayIt(say);
+    if (id == turnId) listenSoon();
+  }
+
+  // yes / no, as whole words (or the ✅ / ❌ buttons)
+  const YES_WORDS = new Set(["हाँ", "हां", "हा", "haan", "han", "ha", "yes", "बताओ", "batao", "सुनाओ", "ok", "okay", "ओके", "ठीक", "जरूर", "ज़रूर"]);
+  const NO_WORDS = new Set(["नहीं", "नही", "nahi", "nahin", "no", "मत", "ना", "na"]);
+
+  function saysYes(text) {
+    return text.includes("✅") || cleanText(text).split(/[^\p{L}\p{M}\p{N}]+/u).some((w) => YES_WORDS.has(w));
+  }
+
+  function saysNo(text) {
+    return text.includes("❌") || cleanText(text).split(/[^\p{L}\p{M}\p{N}]+/u).some((w) => NO_WORDS.has(w));
+  }
+
+  async function answerOffer(text) {
+    let offer = pendingOffer;
+    pendingOffer = null;
+    if (saysNo(text)) {
+      localReply(text, "ठीक है! तो बताओ, और क्या चल रहा है? 😊", [], "calm");
+      return true;
+    }
+    if (!saysYes(text)) return false; // something new: carry on talking normally
+    if (offer.fact) {
+      showPicture(offer.fact.pic);
+      await localReply(text, "सुनो! " + offer.fact.f + " 🤩", [], "surprised");
+      return true;
+    }
+    // no checked fact about it: ask Bolo (the AI) for one
+    showKidText(text);
+    turn(offer.topic ? offer.topic + " के बारे में एक मज़ेदार बात बताओ" : "कोई मज़ेदार बात बताओ", true);
+    return true;
+  }
+
+  async function turn(text, fromOffer = false) {
     if (!active || state == "thinking") return;
     text = (text || "").trim();
     if (!text) return;
@@ -211,6 +311,18 @@
       if (id == turnId) listenSoon();
       return;
     }
+    if (game == "chat" && text != "[START]" && !fromOffer) {
+      // the answer to "shall I tell you something fun?"
+      if (pendingOffer && (await answerOffer(text))) return;
+      // said the same thing again today: offer a fun fact instead of asking the AI again
+      if (saidToday().list.some((old) => same(old, text))) {
+        let { fact, topic } = factAbout(text);
+        pendingOffer = { fact, topic };
+        let say = "हाहा, यह तो तुमने अभी बताया था! 😄 क्या मैं तुम्हें " + (topic ? topic + " के बारे में " : "") + "एक मज़ेदार बात बताऊँ?";
+        return localReply(text, say, ["✅ हाँ, बताओ!", "❌ नहीं"], "excited");
+      }
+      rememberSaid(text);
+    }
     if (!underLimit()) {
       setMood("calm");
       await sayIt("आज हमने बहुत सारी बातें कर लीं! कल फिर बात करेंगे। 😊");
@@ -218,14 +330,9 @@
     }
 
     // the kid's words: the live bubble becomes their message (or a new one for a tapped choice)
-    if (liveMsg) {
-      liveMsg.innerText = text;
-      liveMsg.classList.remove("live");
-      liveMsg = null;
-    } else if (text != "[START]") {
-      addMsg("kid", text);
-    }
+    if (!fromOffer) showKidText(text);
     history.push({ role: "kid", text });
+    history = history.slice(-KEEP);
     setState("thinking");
     setMood("thinking");
     showTyping(true);
@@ -253,7 +360,15 @@
       reply = { say: "चलो, कुछ और मज़ेदार बात करते हैं! 🌈", mood: "calm", picture: "", options: [], star: false, remember: "", listen: true };
     }
 
+    if (game == "chat" && history.some((m) => m.role == "bolo" && same(m.text, reply.say))) {
+      let { fact, topic } = factAbout(text);
+      pendingOffer = { fact, topic };
+      reply.say = "अरे, यह तो मैं बता चुका हूँ! 😄 क्या मैं तुम्हें " + (topic ? topic + " के बारे में " : "") + "कोई नई मज़ेदार बात बताऊँ?";
+      reply.options = ["✅ हाँ, बताओ!", "❌ नहीं"];
+      reply.picture = "";
+    }
     history.push({ role: "bolo", text: reply.say });
+    history = history.slice(-KEEP);
     if (reply.remember && !isBlocked(reply.remember)) {
       let memory = store("memory", []).filter((m) => m != reply.remember);
       keep("memory", [...memory, reply.remember].slice(-8));
@@ -361,6 +476,7 @@
     hush();
     game = name;
     history = [];
+    pendingOffer = null;
     storyLog = [];
     storyTitle = "";
     storyDone = false;
