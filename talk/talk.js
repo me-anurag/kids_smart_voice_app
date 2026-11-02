@@ -279,13 +279,108 @@
     showMenu();
   };
 
-  // ---------- listening: record the kid, send to Whisper ----------
+  // ---------- listening ----------
+  // 1st choice: the phone's Google speech recognition in Hindi (best for Indian kids' Hindi,
+  //    shows the words live while the kid speaks).
+  // Backup (no Google recognition on this phone, or it fails): record and send to Groq Whisper.
+
+  const Google = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let useWhisper = !Google;
+  let recording = false;
+
+  function startRecording() {
+    if (recording || !active || state == "thinking") return;
+    clearTimeout(listenTimer);
+    hush();
+    if (useWhisper) whisperStart();
+    else googleStart();
+  }
+
+  function stopRecording(sendIt) {
+    if (!recording) return;
+    if (useWhisper) whisperStop(sendIt);
+    else googleStop(sendIt);
+  }
+
+  // ---------- Google (in the phone) ----------
+
+  let rec = null;
+  let finalText = "";
+  let keepResult = true;
+
+  function googleStart() {
+    rec = new Google();
+    rec.lang = "hi-IN";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.continuous = false;
+    finalText = "";
+    keepResult = true;
+    let failed = false;
+    let problem = "";
+    let thisRec = rec;
+
+    thisRec.onresult = (e) => {
+      let done = "";
+      let live = "";
+      for (let r of e.results) {
+        if (r.isFinal) done += r[0].transcript + " ";
+        else live += r[0].transcript + " ";
+      }
+      finalText = done.trim();
+      tHeard.innerText = "🗣️ " + (finalText + " " + live).trim(); // the kid sees their words appear
+    };
+    thisRec.onerror = (e) => {
+      if (e.error == "aborted" || e.error == "no-speech") return;
+      failed = true;
+      if (e.error == "not-allowed") {
+        problem = "माइक चालू करने की इजाज़त दो 🎤";
+      } else if (["network", "service-not-allowed", "language-not-supported", "audio-capture"].includes(e.error)) {
+        useWhisper = true; // Google can't help on this phone: use Whisper from now on
+      }
+    };
+    thisRec.onend = () => {
+      if (rec != thisRec) return;
+      recording = false;
+      rec = null;
+      if (!active) return;
+      if (failed && useWhisper) {
+        setState("idle");
+        return whisperStart(); // try again straight away with the backup
+      }
+      if (!keepResult) return state == "listening" && setState("idle");
+      if (finalText) return heardText(finalText);
+      setState("idle");
+      if (problem) tMicLabel.innerText = problem;
+      else if (!failed) noVoice();
+    };
+
+    try {
+      thisRec.start();
+    } catch (e) {
+      useWhisper = true;
+      return whisperStart();
+    }
+    recording = true;
+    tHeard.innerText = "🗣️ ...";
+    setState("listening");
+    setMood("happy");
+    buzz();
+  }
+
+  function googleStop(sendIt) {
+    keepResult = sendIt;
+    try {
+      sendIt ? rec.stop() : rec.abort();
+    } catch (e) {}
+  }
+
+  // ---------- Whisper (backup) ----------
 
   let stream = null;
   let recorder = null;
   let audioCtx = null;
   let meterTimer = null;
-  let recording = false;
 
   // phones only allow audio processing after a tap: prepare it when Talk is opened
   function wakeAudio() {
@@ -298,13 +393,12 @@
     stream = null;
   }
 
-  async function startRecording(auto) {
-    if (recording || !active || state == "thinking") return;
-    clearTimeout(listenTimer);
-    hush();
+  async function whisperStart() {
+    if (recording || !active) return;
     recording = true; // claim the mic now, so a second tap can't start another recording
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      // raw sound: the phone's call filters are made for adults on calls and blur kids' voices
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     } catch (e) {
       recording = false;
       setState("idle");
@@ -320,7 +414,7 @@
       (t) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)
     );
     try {
-      recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+      recorder = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 64000 });
     } catch (e) {
       recording = false;
       closeMic();
@@ -332,6 +426,7 @@
     let chunks = [];
     let heardVoice = false;
     let thisRecorder = recorder;
+    let started = Date.now();
     thisRecorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     thisRecorder.onstop = () => {
       clearInterval(meterTimer);
@@ -339,47 +434,45 @@
       let blob = new Blob(chunks, { type: thisRecorder.mimeType || type || "audio/webm" });
       if (!thisRecorder.sendIt || !active) {
         if (state == "listening") setState("idle");
-      } else if (!heardVoice || blob.size < 1500) {
+      } else if ((!heardVoice && Date.now() - started < 2500) || blob.size < 1500) {
         setState("idle");
-        if (!auto) noVoice();
+        noVoice();
       } else {
-        send(blob);
+        whisperSend(blob);
       }
     };
     thisRecorder.start(250);
+    tHeard.innerText = "";
     setState("listening");
     setMood("happy");
-    if (!auto) buzz();
+    buzz();
 
-    // stop by itself: after the kid speaks and then goes quiet, or if nobody speaks.
-    // "Speaking" is measured against the room's own noise, so it works in quiet and noisy rooms.
+    // stops by itself after the kid has spoken and then stays quiet for 2 seconds
+    // (kids pause in the middle of sentences), or after 15 seconds
     wakeAudio();
     let analyser = audioCtx.createAnalyser();
     analyser.fftSize = 1024;
     let source = audioCtx.createMediaStreamSource(stream);
     source.connect(analyser);
     let samples = new Float32Array(analyser.fftSize);
-    let started = Date.now();
-    let lastVoice = 0;
-    let noise = 0.01;
+    let lastVoice = Date.now();
     meterTimer = setInterval(() => {
       analyser.getFloatTimeDomainData(samples);
       let level = Math.sqrt(samples.reduce((sum, x) => sum + x * x, 0) / samples.length);
       let now = Date.now();
-      if (now - started < 300) noise = Math.max(noise, level); // first moment: learn the room noise
       tMic.style.setProperty("--level", Math.min(1, level * 12).toFixed(2));
-      if (level > Math.max(0.02, noise * 2.5)) {
+      if (level > 0.015) {
         heardVoice = true;
         lastVoice = now;
       }
-      if (heardVoice && now - lastVoice > 1500) stopRecording(true);
-      else if (!heardVoice && now - started > 8000) stopRecording(false);
-      else if (now - started > 15000) stopRecording(true);
+      if (heardVoice && now - lastVoice > 2000 && now - started > 1200) whisperStop(true);
+      else if (!heardVoice && now - started > 8000) whisperStop(true);
+      else if (now - started > 15000) whisperStop(true);
     }, 100);
     thisRecorder.addEventListener("stop", () => source.disconnect(), { once: true });
   }
 
-  function stopRecording(sendIt) {
+  function whisperStop(sendIt) {
     if (!recording) return;
     recording = false;
     clearInterval(meterTimer);
@@ -392,17 +485,10 @@
     }
   }
 
-  async function noVoice() {
-    setMood("calm");
-    let id = ++turnId;
-    await sayIt("मुझे कुछ सुनाई नहीं दिया। माइक दबाकर ज़ोर से बोलो! 👂");
-    if (id == turnId) setState("idle");
-  }
-
   // Whisper sometimes "hears" these in silence or noise
-  const NOT_SPEECH = /^(धन्यवाद|शुक्रिया|thank you|thanks for watching|सब्सक्राइब( करें)?|subscribe|हाँ जी|बाय)[.!।]?$/i;
+  const NOT_SPEECH = /^(धन्यवाद|शुक्रिया|thank you|thanks for watching|सब्सक्राइब( करें)?|subscribe|बाय)[.!।]?$/i;
 
-  async function send(blob) {
+  async function whisperSend(blob) {
     setState("thinking");
     setMood("thinking");
     let text = "";
@@ -422,7 +508,23 @@
     if (!active) return;
     setState("idle");
     text = text.replace(/\s+/g, " ").trim();
-    if (!text || NOT_SPEECH.test(text) || !/[\p{L}]/u.test(text)) {
+    if (NOT_SPEECH.test(text)) text = "";
+    heardText(text);
+  }
+
+  // ---------- what the kid said ----------
+
+  async function noVoice() {
+    setMood("calm");
+    let id = ++turnId;
+    await sayIt("मुझे कुछ सुनाई नहीं दिया। बटन दबाकर ज़ोर से बोलो! 👂");
+    if (id == turnId) listenSoon();
+  }
+
+  async function heardText(text) {
+    text = (text || "").trim();
+    setState("idle");
+    if (!text || !/[\p{L}]/u.test(text)) {
       setMood("calm");
       let id = ++turnId;
       await sayIt("मुझे ठीक से सुनाई नहीं दिया, फिर से बोलो! 👂");
@@ -441,13 +543,13 @@
     turn(text);
   }
 
-  // the big button: listen, stop listening, or interrupt Bolo and listen
+  // the big button: speak, finish speaking, or interrupt Bolo and speak
   tMic.onclick = () => {
     wakeAudio();
     if (state == "thinking") return;
     if (recording) return stopRecording(true);
     turnId++; // whatever Bolo was about to do next is cancelled: the kid wants to talk
-    startRecording(false);
+    startRecording();
   };
 
   // ---------- joining the app's modes ----------

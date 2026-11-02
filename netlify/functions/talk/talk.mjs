@@ -70,7 +70,7 @@ async function hear({ audio, mime, kid }) {
   let bytes = Buffer.from(audio, "base64");
   let name = String((kid && kid.hindi) || "").slice(0, 30);
   // a hint for Whisper: Hindi in Devanagari, a child talking, the child's name and common words
-  let hint = `${name ? name + " नाम का " : ""}एक छोटा बच्चा हिंदी में बोलो से बात कर रहा है। हाँ, नहीं, कहानी, क्विज़, पहेली, बातें, हाथी, शेर, मुझे, क्यों, क्या।`;
+  let hint = `${name ? name + " नाम का " : ""}एक छोटा बच्चा हिंदी में बात कर रहा है।`;
 
   let answered = false;
   for (let model of STT_MODELS) {
