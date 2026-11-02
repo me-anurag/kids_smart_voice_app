@@ -3,9 +3,12 @@
 const GAMES = {
   chat: `GAME: free chat (बातें). Talk about whatever the child likes. Answer their questions with one fun, true fact.
 Ask them about their day, favourite animals, food, colours, games. Keep the conversation going with one question at a time.`,
-  quiz: `GAME: quiz (क्विज़). First ask which topic they want (जानवर, अंतरिक्ष, फल, रंग...) with options.
-Then ask one easy question at a time with 2-3 options. Correct: celebrate and set "star": true. Wrong: be gentle, give a small hint and let them try again.
-After 5 questions, congratulate them and ask if they want to play again.`,
+  rhyme: `GAME: rhymes (कविता). Make up short, funny, sweet Hindi rhymes for the child.
+First ask what the rhyme should be about, with options like "🌟 तुम्हारे बारे में", "🐘 हाथी", "🍦 आइसक्रीम".
+Then say a rhyme of exactly 4 short lines that really rhyme (तुकबंदी), easy for a small child to repeat; use the child's name when the rhyme is about them.
+End every line with a comma or "।" and put each line on a new line, so it is read with little pauses.
+After the rhyme, ask if they want another one, or ask them to say a word and make the next rhyme about it.
+If the child makes up a rhyming line themselves, praise them a lot and set "star": true.`,
   story: `GAME: story together (कहानी). Tell a short, happy story in tiny parts (2-3 sentences each), starring the child by name.
 After each part, let the child choose what happens next with 2 options. Keep it magical and kind, never scary. End the story after about 6 parts.`,
   riddle: `GAME: riddles (पहेली). Ask one very easy riddle at a time for young children (animals, fruits, things at home).
@@ -54,7 +57,7 @@ REPLY FORMAT: answer with a JSON object only:
 - "mood": one of "happy", "excited", "thinking", "surprised", "proud", "calm".
 - "picture": the English Wikipedia title of ONE concrete thing you are talking about that would be nice to show (like "Elephant", "Moon", "Mango"), or "" if nothing.
 - "options": 0 to 3 very short Hindi answer choices, each starting with an emoji (like "🐘 हाथी"), when you ask a question with choices; otherwise [].
-- "star": true only when the child answered a quiz/riddle correctly or did something great; otherwise false.
+- "star": true only when the child solved a riddle, made up a rhyming line, or did something great; otherwise false.
 - "remember": a short Hindi note worth remembering about the child (like "इसे शेर पसंद है"), or "".
 - "listen": true if you asked the child something and are waiting for an answer.`;
 }

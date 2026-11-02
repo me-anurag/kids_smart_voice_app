@@ -193,7 +193,7 @@ body.mode-talk #bottom {
   text-shadow: none;
 }
 
-.tGame[data-game="quiz"] { --c: #22b8ff; --d: #0577b8; }
+.tGame[data-game="rhyme"] { --c: #22b8ff; --d: #0577b8; }
 .tGame[data-game="story"] { --c: #3ed16f; --d: #16903f; }
 .tGame[data-game="riddle"] { --c: #ff9f1a; --d: #c26a00; }
 

@@ -18,7 +18,7 @@ const STT_MODELS = (process.env.GROQ_STT_MODELS || "whisper-large-v3,whisper-lar
   .split(",").map((m) => m.trim()).filter(Boolean);
 const URDU_SCRIPT = /[؀-ۿ]/;
 const MOODS = replySchema.properties.mood.enum;
-const GAMES = ["chat", "quiz", "story", "riddle"];
+const GAMES = ["chat", "rhyme", "story", "riddle"];
 
 export default async (req) => {
   if (req.method != "POST") return json({ error: "post-only" }, 405);

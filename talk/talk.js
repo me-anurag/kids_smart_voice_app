@@ -1,4 +1,4 @@
-// ---------- Talk: chat, quiz, story and riddles with Bolo (Hindi) ----------
+// ---------- Talk: chat, rhymes, story and riddles with Bolo (Hindi) ----------
 // Listening: Groq Whisper, Bolo's replies: Groq chat, both through netlify/functions/talk.
 // Bolo's voice is the phone's Hindi voice.
 //
@@ -26,7 +26,7 @@
 
   const GAME_WORDS = {
     chat: ["बात", "बातें", "baat", "baatein", "chat"],
-    quiz: ["क्विज़", "क्विज", "quiz", "सवाल"],
+    rhyme: ["कविता", "kavita", "poem", "rhyme", "गाना", "gaana", "तुकबंदी"],
     story: ["कहानी", "kahani", "story"],
     riddle: ["पहेली", "paheli", "riddle"],
   };
@@ -236,7 +236,7 @@
     tHeard.innerText = "";
     showOptions([]);
     setMood("excited");
-    await sayIt("नमस्ते " + kid().hindi + "! आज क्या करें? बातें, क्विज़, कहानी या पहेली? 🎈");
+    await sayIt("नमस्ते " + kid().hindi + "! आज क्या करें? बातें, कविता, कहानी या पहेली? 🎈");
     if (id == turnId) listenSoon();
   }
 
