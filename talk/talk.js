@@ -13,9 +13,8 @@
   const view = $("talkView");
   const tBox = $("talkBox");
   const tMascot = $("tMascot");
-  const tSay = $("tSay");
-  const tHeard = $("tHeard");
-  const tPicture = $("tPicture");
+  const tStatus = $("tStatus");
+  const tChat = $("tChat");
   const tOptions = $("tOptions");
   const tMic = $("tMic");
   const tMicLabel = $("tMicLabel");
@@ -78,6 +77,48 @@
     tBox.dataset.state = next;
     tMicLabel.innerText = LABELS[next];
     tMic.classList.toggle("listening", next == "listening");
+    tStatus.innerText = STATUS[next];
+  }
+
+  const STATUS = { idle: "ऑनलाइन 🟢", speaking: "बोल रहा है... 🔊", listening: "सुन रहा है... 👂", thinking: "सोच रहा है... 💭" };
+
+  // ---------- the chat: Bolo on the left, the kid on the right ----------
+
+  function scrollDown() {
+    tChat.scrollTo({ top: tChat.scrollHeight, behavior: "smooth" });
+  }
+
+  function addMsg(who, text, extra = "") {
+    let msg = document.createElement("div");
+    msg.className = "tMsg " + who + (extra ? " " + extra : "");
+    msg.innerText = text;
+    tChat.appendChild(msg);
+    while (tChat.children.length > 60) tChat.firstChild.remove();
+    scrollDown();
+    return msg;
+  }
+
+  let typing = null; // Bolo's "..." while he thinks
+  let liveMsg = null; // the kid's bubble that fills in while they speak
+
+  function showTyping(on) {
+    if (typing) typing.remove();
+    typing = null;
+    if (on) {
+      typing = addMsg("bolo", "", "typing");
+      typing.innerHTML = '<span class="tDots"><i></i><i></i><i></i></span>';
+    }
+  }
+
+  function liveBubble(text) {
+    if (!liveMsg) liveMsg = addMsg("kid", "", "live");
+    liveMsg.innerText = !text ? "🎤 ..." : isBlocked(text) ? "🙊 ..." : text;
+    scrollDown();
+  }
+
+  function dropLiveBubble() {
+    if (liveMsg) liveMsg.remove();
+    liveMsg = null;
   }
 
   function setMood(mood) {
@@ -85,12 +126,9 @@
   }
 
   // Bolo says something; resolves when he has really finished speaking
-  async function sayIt(text) {
+  async function sayIt(text, again = false) {
     lastSay = text;
-    tSay.innerText = text;
-    tSay.classList.remove("pop");
-    void tSay.offsetWidth;
-    tSay.classList.add("pop");
+    if (!again) addMsg("bolo", text);
     setState("speaking");
     tMascot.classList.add("talking");
     await speak(text);
@@ -108,17 +146,17 @@
   // ---------- pictures of what Bolo talks about ----------
 
   async function showPicture(title) {
-    tPicture.hidden = true;
     if (!title || isBlocked(title)) return;
     try {
       let pages = goodPages(await wiki("en", { titles: title, prop: "pageimages|description", piprop: "thumbnail", pithumbsize: 640 }));
       let page = pages[0];
-      if (!page || !page.thumbnail || isBlocked(page.description)) return;
-      tPicture.querySelector("img").src = page.thumbnail.source;
-      tPicture.hidden = false;
-      tPicture.classList.remove("pop");
-      void tPicture.offsetWidth;
-      tPicture.classList.add("pop");
+      if (!page || !page.thumbnail || isBlocked(page.description) || !active) return;
+      let msg = addMsg("bolo", "", "picture");
+      let img = new Image();
+      img.alt = "";
+      img.onload = scrollDown;
+      img.src = page.thumbnail.source;
+      msg.appendChild(img);
     } catch (e) {}
   }
 
@@ -148,6 +186,11 @@
     let id = ++turnId;
 
     if (isBlocked(text)) {
+      if (liveMsg) {
+        liveMsg.innerText = "🙊";
+        liveMsg.classList.remove("live");
+        liveMsg = null;
+      }
       setMood("calm");
       await sayIt("चलो, कुछ और मज़ेदार बात करते हैं! 🌈");
       if (id == turnId) listenSoon();
@@ -159,11 +202,18 @@
       return;
     }
 
-    if (text != "[START]") tHeard.innerText = "🗣️ " + text;
+    // the kid's words: the live bubble becomes their message (or a new one for a tapped choice)
+    if (liveMsg) {
+      liveMsg.innerText = text;
+      liveMsg.classList.remove("live");
+      liveMsg = null;
+    } else if (text != "[START]") {
+      addMsg("kid", text);
+    }
     history.push({ role: "kid", text });
     setState("thinking");
     setMood("thinking");
-    tSay.innerHTML = '<span class="tDots"><i></i><i></i><i></i></span>';
+    showTyping(true);
 
     let reply = null;
     try {
@@ -174,6 +224,7 @@
       });
       if (res.ok) reply = await res.json();
     } catch (e) {}
+    showTyping(false);
     if (id != turnId || !active) return;
     setState("idle");
 
@@ -202,9 +253,10 @@
     }
 
     setMood(reply.mood);
-    showPicture(reply.picture);
     showOptions(reply.options || []);
-    await sayIt(reply.say);
+    let saying = sayIt(reply.say);
+    showPicture(reply.picture);
+    await saying;
     if (id == turnId && reply.listen) listenSoon();
   }
 
@@ -223,8 +275,9 @@
     hush();
     game = name;
     history = [];
-    tPicture.hidden = true;
-    tHeard.innerText = "";
+    tChat.innerHTML = "";
+    liveMsg = null;
+    typing = null;
     showOptions([]);
     setState("idle");
     setMood("excited");
@@ -236,7 +289,7 @@
     stopRecording(false);
     if (!lastSay || state == "thinking") return;
     let id = ++turnId;
-    await sayIt(lastSay);
+    await sayIt(lastSay, true);
     if (id == turnId) listenSoon();
   };
 
@@ -299,7 +352,7 @@
         else live += r[0].transcript + " ";
       }
       finalText = done.trim();
-      tHeard.innerText = "🗣️ " + (finalText + " " + live).trim(); // the kid sees their words appear
+      liveBubble((finalText + " " + live).trim()); // the kid sees their words appear
     };
     thisRec.onerror = (e) => {
       if (e.error == "aborted" || e.error == "no-speech") return;
@@ -319,9 +372,13 @@
         setState("idle");
         return whisperStart(); // try again straight away with the backup
       }
-      if (!keepResult) return state == "listening" && setState("idle");
+      if (!keepResult) {
+        dropLiveBubble();
+        return state == "listening" && setState("idle");
+      }
       if (finalText) return heardText(finalText);
       setState("idle");
+      dropLiveBubble();
       if (problem) tMicLabel.innerText = problem;
       else if (!failed) noVoice();
     };
@@ -333,7 +390,7 @@
       return whisperStart();
     }
     recording = true;
-    tHeard.innerText = "🗣️ ...";
+    liveBubble("");
     setState("listening");
     setMood("happy");
     buzz();
@@ -404,6 +461,7 @@
       closeMic();
       let blob = new Blob(chunks, { type: thisRecorder.mimeType || type || "audio/webm" });
       if (!thisRecorder.sendIt || !active) {
+        dropLiveBubble();
         if (state == "listening") setState("idle");
       } else if ((!heardVoice && Date.now() - started < 2500) || blob.size < 1500) {
         setState("idle");
@@ -413,7 +471,7 @@
       }
     };
     thisRecorder.start(250);
-    tHeard.innerText = "";
+    liveBubble("");
     setState("listening");
     setMood("happy");
     buzz();
@@ -486,6 +544,7 @@
   // ---------- what the kid said ----------
 
   async function noVoice() {
+    dropLiveBubble();
     setMood("calm");
     let id = ++turnId;
     await sayIt("मुझे कुछ सुनाई नहीं दिया। बटन दबाकर ज़ोर से बोलो! 👂");
@@ -496,6 +555,7 @@
     text = (text || "").trim();
     setState("idle");
     if (!text || !/[\p{L}]/u.test(text)) {
+      dropLiveBubble();
       setMood("calm");
       let id = ++turnId;
       await sayIt("मुझे ठीक से सुनाई नहीं दिया, फिर से बोलो! 👂");

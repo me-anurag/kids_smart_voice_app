@@ -319,3 +319,132 @@ body.mode-talk #bottom {
   font-weight: 800;
   text-shadow: 0 2px 0 #6a00b8;
 }
+
+/* ---------- chat layout: header, scrollable messages, controls ---------- */
+
+#tHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+#tHead .tMascot {
+  width: 54px;
+  max-height: none;
+  flex-shrink: 0;
+}
+
+#tWho {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+#tWho b {
+  font-size: 20px;
+}
+
+#tStatus {
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+#tChat {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 10px;
+  scrollbar-width: none;
+}
+
+#tChat::-webkit-scrollbar {
+  display: none;
+}
+
+.tMsg {
+  flex-shrink: 0; /* bubbles keep their size; the chat scrolls instead */
+  max-width: 82%;
+  padding: 9px 13px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.45;
+  box-shadow: 0 3px 0 rgba(60, 0, 90, 0.25);
+  white-space: pre-line;
+  animation: msgIn 0.25s ease;
+}
+
+@keyframes msgIn {
+  from { transform: translateY(8px) scale(0.96); opacity: 0.4; }
+}
+
+/* Bolo on the left */
+.tMsg.bolo {
+  align-self: flex-start;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* the kid on the right */
+.tMsg.kid {
+  align-self: flex-end;
+  background: #ffe066;
+  color: #5b3200;
+  border-radius: 18px 18px 4px 18px;
+}
+
+/* the kid's words appearing while they speak */
+.tMsg.kid.live {
+  background: #d4ffd9;
+  color: #0a5a2a;
+  border: 2px dashed #2fd16a;
+}
+
+.tMsg.typing {
+  padding: 12px 16px;
+}
+
+.tMsg.typing .tDots i {
+  width: 9px;
+  height: 9px;
+  margin: 0 3px;
+}
+
+.tMsg.picture {
+  padding: 5px;
+  background: #fff;
+}
+
+.tMsg.picture img {
+  display: block;
+  max-width: 100%;
+  max-height: 170px;
+  border-radius: 13px;
+}
+
+#tOptions {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+#tOptions:empty {
+  display: none;
+}
+
+.tOption {
+  font-size: 17px;
+  padding: 8px 16px;
+}
